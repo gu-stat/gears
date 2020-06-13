@@ -44,8 +44,6 @@
 #'     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
 #'     to enter the right-hand side of the equation.
 #'
-#' @export
-#'
 #' @examples
 #' all_models_rhs(y.name = "PORK_PRICE", y.max.lags = 2, use.intercept = "both")
 #'
