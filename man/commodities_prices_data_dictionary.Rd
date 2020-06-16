@@ -4,8 +4,7 @@
 \name{commodities_prices_data_dictionary}
 \alias{commodities_prices_data_dictionary}
 \title{Descriptions of the commoditiesprices data.}
-\format{
-A dataframe with 6 observations of fields, and 8 variables.
+\format{A dataframe with 6 observations of fields, and 8 variables.
    \describe{\item{variable_name}{The variable name as it appears in the
    \code{\link{commodities_prices}} data frame.}
    \item{variable_description}{Detailed description of the contents of each
@@ -16,8 +15,7 @@ A dataframe with 6 observations of fields, and 8 variables.
    \item{source}{Name of the data source.}
    \item{source_link}{URL Link to the data source.}
    \item{access_on}{Date in which the data used to create the
-   \code{\link{commodities_prices}} data frame was obtained.}}
-}
+   \code{\link{commodities_prices}} data frame was obtained.}}}
 \usage{
 commodities_prices_data_dictionary
 }

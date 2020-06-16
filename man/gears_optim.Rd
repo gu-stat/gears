@@ -34,6 +34,12 @@ gears_optim(
 
 \item{forecast.horizon}{Number of periods for forecasting.}
 
+\item{search.size.rs}{A vector or a numeric value that indicates the
+possible rolling sample sizes that the algorithm will search through.}
+
+\item{search.number.rs}{A vector or a numeric value that indicates the
+possible number of rolling sample that the algorithm will search through.}
+
 \item{glm.family}{A description of the error distribution to be used in the
 model. See \link[stats]{glm} for details.}
 
@@ -45,11 +51,10 @@ the Y (left-hand side) variable (see Details). Can be NULL (default) if
 the past values of the Y variable are not included in the model.}
 
 \item{x.names}{List with names of the X (right-hand side) variables that
-have a maximum number of lags (see Details). Can be NULL (default) if
-univariate model or if your model does not have variables of this type.}
-
-\item{x.max.lags}{List of numeric values that give the maximum number of lags
-of the X (right-hand side) variables. Can be NULL (default).}
+    have a maximum number of lags (see Details). Can be NULL (default) if
+    univariate model or if your model does not have variables of this type.
+#' @param x.max.lags List of numeric values that give the maximum number of lags
+    of the X (right-hand side) variables. Can be NULL (default).}
 
 \item{x.fixed.names}{List with names of the X (right-hand side) variables
 that have a fixed number of lags (see Details).
@@ -95,15 +100,20 @@ If \code{betas.selection == "both"}, then two out-of-sample forecasts
 will be estimated (one with \code{betas.selection == "last"} and
 another with \code{betas.selection == "average"}).}
 
+\item{parallel.use}{Boolean. Whether or not parallel computing should be
+used. \code{gears_optim} uses the \code{\link[future.apply]} package
+\url(https://github.com/HenrikBengtsson/future.apply)}
+
+\item{DATA.insample}{Training data set. Either as a data frame object, or
+a time series (ts) object.}
+
+\item{DATA.outsample}{Testing data set. Either as a data frame object, or
+a time series (ts) object.}
+
 \item{...}{Further arguments passed to \link[stats]{glm}.}
-
-\item{size.rs}{Number of observations in the rolling sample.}
-
-\item{number.rs}{Number of rolling samples.}
 }
 \value{
-An object of class "forecast.gears".
-    An object of class "forecast.gears" is a list containing the following
+A list containing the following
     elements:
     \describe{
      \item{fitted_best}{A list containing information about
@@ -124,99 +134,4 @@ An object of class "forecast.gears".
 \description{
 Finds the sample size and number of samples that minimizes the in-sample
 (ex-ante) forecasting error.
-}
-\details{
-If \code{y.max.lags} equals to a number, then all lags of
-    \code{y.name} up to this number (and starting at 0) will be included
-    in the list of variables to enter the right-hand side of the model
-    equations. For example, if \code{y.max.lags = 2}, then
-    \ifelse{html}{\out{Y<sub>t</sub>, Y<sub>t-1</sub>, Y<sub>t-2</sub>
-    }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
-    to enter the right-hand side of the equation.
-}
-\examples{
-# Univariate Time Series Forecasting - Data of class 'ts'.
-gears(
-  DATA                = datasets::WWWusage,
-  forecast.horizon    = 10,
-  size.rs             = 20,
-  number.rs           = 10,
-  glm.family          = "quasi",
-  y.name              = NULL,
-  y.max.lags          = 2,
-  x.names             = NULL,
-  x.max.lags          = NULL,
-  x.fixed.names       = NULL,
-  x.fixed.lags        = NULL,
-  x.interaction.names = NULL,
-  x.interaction.lags  = NULL,
-  last.obs            = length(datasets::WWWusage),
-  use.intercept       = "both",
-  error.measure       = "list",
-  error.measure.list  = list("mse", "mad"),
-  betas.selection     = "last"
-)
-
-# Univariate Time Series Forecasting - Data from a data frame.
-gears(
-  DATA                = gears::commodities_prices,
-  forecast.horizon    = 5,
-  size.rs             = 12,
-  number.rs           = 10,
-  glm.family          = "quasi",
-  y.name              = "PORK_PRICE" ,
-  y.max.lags          = 2,
-  x.names             = NULL,
-  x.max.lags          = NULL,
-  x.fixed.names       = NULL,
-  x.fixed.lags        = NULL,
-  x.interaction.names = NULL,
-  x.interaction.lags  = NULL,
-  last.obs            = 150,
-  use.intercept       = "both",
-  error.measure       = "mse" ,
-  betas.selection     = "last"
-)
-
-# Multivariate Time Series Forecasting
-gears(
-  DATA                = gears::commodities_prices,
-  forecast.horizon    = 1,
-  size.rs             = 12,
-  number.rs           = 5,
-  glm.family          = "quasi",
-  y.name              = "PORK_PRICE" ,
-  y.max.lags          = 1,
-  x.names             = list("BEEF_PRICE", "WHEAT_PRICE") ,
-  x.max.lags          = list(2, 1),
-  x.fixed.names       = NULL,
-  x.fixed.lags        = NULL,
-  x.interaction.names = NULL,
-  x.interaction.lags  = NULL,
-  last.obs            = 150,
-  use.intercept       = "both",
-  error.measure       = "mse" ,
-  betas.selection     = "last"
-)
-
-# Multivariate Time Series Forecasting - With Interactions
-gears(
-  DATA                = gears::commodities_prices,
-  forecast.horizon    = 1,
-  size.rs             = 25,
-  number.rs           = 5,
-  glm.family          = "quasi",
-  y.name              = "PORK_PRICE",
-  y.max.lags          = 1,
-  x.names             = list("BEEF_PRICE"),
-  x.max.lags          = list(2),
-  x.fixed.names       = list("CORN_PRICE", "POULTRY_PRICE"),
-  x.fixed.lags        = list(4, 5),
-  x.interaction.names = list("CORN_PRICE*CORN_PRICE", "WHEAT_PRICE*BEEF_PRICE"),
-  x.interaction.lags  = list(c(1, 1), c(2,3)),
-  last.obs            = 150,
-  use.intercept       = "without",
-  error.measure       = "mse",
-  betas.selection     = "last"
-)
 }
