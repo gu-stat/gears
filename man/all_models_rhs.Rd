@@ -72,18 +72,4 @@ If \code{y.max.lags} equals to a number, then all lags of
     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
     to enter the right-hand side of the equation.
 }
-\examples{
-all_models_rhs(y.name = "PORK_PRICE", y.max.lags = 2, use.intercept = "both")
-
-all_models_rhs(
-  y.name              = "PORK_PRICE" ,
-  y.max.lags          = NULL,
-  x.names             = list("BEEF_PRICE") ,
-  x.max.lags          = list(3),
-  x.fixed.names       = list("CORN_PRICE", "CORN_PRICE") ,
-  x.fixed.lags        = list(4, 5),
-  x.interaction.names = list("CORN_PRICE*CORN_PRICE", "BEEF_PRICE*WHEAT_PRICE"),
-  x.interaction.lags  = list(c(1, 1), c(3,3)),
-  use.intercept       = "without"
-)
-}
+\keyword{internal}
