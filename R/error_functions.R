@@ -15,9 +15,11 @@
 #' @return A numeric value with the forecast error.
 #' @export
 #'
+# @import forecast_naive2
+#'
 #' @examples
 #' # Using NAIVE2:
-#' #' Observations until the 100th will be in the insample (train) data set.
+#' # Observations until the 100th will be in the insample (train) data set.
 #' tmp.cut.at <- 100
 #'
 #' tmp.forecast.horizon <- length(datasets::AirPassengers) - tmp.cut.at
@@ -27,7 +29,7 @@
 #' tmp.orig.freq  <- tsp(datasets::AirPassengers)[3]
 #'
 #'
-#' #' Get train data (insample)
+#' # Get train data (insample)
 #'
 #' tmp.train.start <- tmp.orig.start
 #' tmp.train.end   <- tmp.orig.start + ((tmp.cut.at - 1) * 1 / tmp.orig.freq)
@@ -39,7 +41,7 @@
 #'   frequency = tmp.orig.freq
 #' )
 #'
-#' #' Get test data (outsample)
+#' # Get test data (outsample)
 #'
 #' tmp.test.start <- tmp.orig.start + (tmp.cut.at * 1 / tmp.orig.freq)
 #' tmp.test.end   <- tmp.orig.end
@@ -51,14 +53,14 @@
 #'   frequency = tmp.orig.freq
 #' )
 #'
-#' #' Get Forecasts
+#' # Get Forecasts
 #' tmp.forecasts <- forecast_naive2(
 #'   ts.data          = tmp.train.data,
 #'   forecast.horizon = tmp.forecast.horizon,
 #'   alpha.level      = 0.05
 #' )
 #'
-#' #' Get MSE
+#' # Get MSE
 #'
 #' error_functions(
 #'   error.measure      = "mse",
@@ -69,7 +71,7 @@
 #'   alpha.level        = 0.05
 #' )
 #'
-#' #' Get OWA
+#' # Get OWA
 #'
 #' error_functions(
 #'   error.measure      = "owa",
@@ -87,24 +89,24 @@ error_functions <- function(error.measure,
                             alpha.level = 0.05) {
 
   if (error.measure == "mse") {
-    tmp.error <- fcn_MSE(method.forecasts = forecasts, outsample = outsample)
+    tmp.error <- fcn_MSE(forecasts = forecasts, outsample = outsample)
 
   } else if (error.measure == "mad") {
-    tmp.error <- fcn_MAD(method.forecasts = forecasts, outsample = outsample)
+    tmp.error <- fcn_MAD(forecasts = forecasts, outsample = outsample)
 
   } else if (error.measure == "smape") {
-    tmp.error <- fcn_SMAPE(method.forecasts = forecasts, outsample = outsample)
+    tmp.error <- fcn_SMAPE(forecasts = forecasts, outsample = outsample)
 
   } else if (error.measure == "mase") {
     tmp.error <- fcn_MASE(
-      method.forecasts = forecasts,
+      forecasts = forecasts,
       outsample        = outsample,
       insample         = insample
     )
 
   } else if (error.measure == "owa") {
     tmp.error <- fcn_OWA(
-      method.forecasts = forecasts,
+      forecasts = forecasts,
       outsample        = outsample,
       insample         = insample,
       forecast.horizon = forecast.horizon,
@@ -117,27 +119,27 @@ error_functions <- function(error.measure,
 }
 
 #' @describeIn error_functions MSE - Mean Absolute Deviation
-fcn_MSE <- function(method.forecasts, outsample){
+fcn_MSE <- function(forecasts, outsample){
 
-  tmp.forecasts <- as.numeric(method.forecasts)
+  tmp.forecasts <- as.numeric(forecasts)
   tmp.outsample <- as.numeric(outsample)
 
   mean((tmp.forecasts - tmp.outsample)**2)
 }
 
 #' @describeIn error_functions MAD - Mean Absolute Deviation
-fcn_MAD <-  function(method.forecasts, outsample){
+fcn_MAD <-  function(forecasts, outsample){
 
-  tmp.forecasts <- as.numeric(method.forecasts)
+  tmp.forecasts <- as.numeric(forecasts)
   tmp.outsample <- as.numeric(outsample)
 
   mean(abs(tmp.forecasts - tmp.outsample))
 }
 
 #' @describeIn error_functions SMAPE - Symmetric Mean Absolute Percentage Error
-fcn_SMAPE <-  function(method.forecasts, outsample){
+fcn_SMAPE <-  function(forecasts, outsample){
 
-  tmp.forecasts <- as.numeric(method.forecasts)
+  tmp.forecasts <- as.numeric(forecasts)
   tmp.outsample <- as.numeric(outsample)
 
   tmp.numerator   <- abs(tmp.outsample - tmp.forecasts) * 200
@@ -147,13 +149,13 @@ fcn_SMAPE <-  function(method.forecasts, outsample){
 }
 
 #' @describeIn error_functions MASE - Mean Absolute Scaled Error
-fcn_MASE <- function(method.forecasts, outsample, insample){
+fcn_MASE <- function(forecasts, outsample, insample){
 
-  tmp.forecasts <- as.numeric(method.forecasts)
+  tmp.forecasts <- as.numeric(forecasts)
   tmp.outsample <- as.numeric(outsample)
   tmp.insample  <- as.numeric(insample)
 
-  ts.freq <- frequency(insample)
+  ts.freq <- stats::frequency(insample)
 
   forecastsNaiveSD <- rep(NA, ts.freq)
 
@@ -169,7 +171,7 @@ fcn_MASE <- function(method.forecasts, outsample, insample){
 }
 
 #' @describeIn error_functions OWA - Overall Weighted Average
-fcn_OWA <- function(method.forecasts, outsample, insample, forecast.horizon,
+fcn_OWA <- function(forecasts, outsample, insample, forecast.horizon,
                     alpha.level) {
 
   # \__ Naive2 -----------------------------------------------------------------
@@ -183,13 +185,13 @@ fcn_OWA <- function(method.forecasts, outsample, insample, forecast.horizon,
 
   ## \____ SMAPE ----
   tmp.SMAPE.naive2 <- fcn_SMAPE(
-    method.forecasts = tmp.forecasts.naive2,
+    forecasts = tmp.forecasts.naive2,
     outsample        = outsample
   )
 
   ## \____ MASE ----
   tmp.MASE.naive2 <- fcn_MASE(
-    method.forecasts = tmp.forecasts.naive2,
+    forecasts = tmp.forecasts.naive2,
     outsample        = outsample,
     insample         = insample
   )
@@ -198,13 +200,13 @@ fcn_OWA <- function(method.forecasts, outsample, insample, forecast.horizon,
 
   ## \____ SMAPE ----
   tmp.SMAPE.method <- fcn_SMAPE(
-    method.forecasts = method.forecasts,
+    forecasts = forecasts,
     outsample        = outsample
   )
 
   ## \____ MASE ----
   tmp.MASE.method <- fcn_MASE(
-    method.forecasts = method.forecasts,
+    forecasts = forecasts,
     outsample        = outsample,
     insample         = insample
   )
