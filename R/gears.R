@@ -213,8 +213,8 @@ gears <- function(DATA,
     tmp_lhs      <- paste0(Y_name, "_plus_", forecast.lead)
     tmp_equation <- paste0(tmp_lhs, all.equations.rhs[eq.number])
 
-    tmp_fit <- glm(
-      formula = as.formula(tmp_equation),
+    tmp_fit <- stats::glm(
+      formula = stats::as.formula(tmp_equation),
       family  = glm.family,
       data    = DF.Fit.Predict[[forecast.lead]]$data_fit[[sample.number]],
       ...
@@ -223,7 +223,7 @@ gears <- function(DATA,
     if (length(tmp_fit$coefficients) > tmp_fit$rank) {
       tmp_forecast <- NA
     } else {
-      tmp_forecast <- predict(
+      tmp_forecast <- stats::predict(
         object  = tmp_fit,
         newdata = DF.Fit.Predict[[forecast.lead]]$data_predict[[sample.number]],
         type    = "response"
@@ -240,8 +240,8 @@ gears <- function(DATA,
     tmp_lhs      <- paste0(Y_name, "_plus_", forecast.lead)
     tmp_equation <- paste0(tmp_lhs, all.equations.rhs[eq.number[forecast.lead]])
 
-    tmp_fit <- glm(
-      formula = as.formula(tmp_equation),
+    tmp_fit <- stats::glm(
+      formula = stats::as.formula(tmp_equation),
       family  = glm.family,
       data    = DF.Fit.Predict[[forecast.lead]]$data_fit[[sample.number]],
       ...
@@ -344,12 +344,20 @@ gears <- function(DATA,
                   tmp_out <- DF.Fit.Predict[[H]]$data_predict[[RS]][,tmp_lhs]
 
                   tmp_forecasts <- prediction.gears[[H]][RS, EQ]
-
-                  fcn_owa(
-                    forecasts.values = tmp_forecasts,
-                    insample         = tmp_in,
-                    outsample        = tmp_out,
-                    forecast.horizon = H
+                  # TODO: VER RESULTADO AQUI APOS MUDANCA EM fcn_OWA
+                  # fcn_OWA(
+                  #   forecasts.values = tmp_forecasts,
+                  #   insample         = tmp_in,
+                  #   outsample        = tmp_out,
+                  #   forecast.horizon = H
+                  # )
+                  error_functions(
+                    error.measure      = "owa",
+                    forecasts          = tmp_forecasts,
+                    outsample          = tmp_out,
+                    insample           = tmp_in,
+                    forecast.horizon   = H,
+                    alpha.level        = 0.05
                   )
                 }
               )
@@ -392,7 +400,7 @@ gears <- function(DATA,
 
         tmp_fit <- estimates.best[[errorMeasure]][[X]][[number.rs]]
 
-        tmp_forecast <- predict(
+        tmp_forecast <- stats::predict(
           object  = tmp_fit,
           newdata = DF.Forecast[last.obs, ],
           type    = "response"
