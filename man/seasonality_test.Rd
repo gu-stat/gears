@@ -21,22 +21,4 @@ A boolean indicating whether or not the ts object has seasonality.
 Used to determine whether a time series is seasonal. Code modified from the
 M4 Competition's original code.
 }
-\examples{
-seasonality_test(
-  ts.data = datasets::WWWusage,
-  ts.freq = frequency(datasets::WWWusage),
-  alpha.level = 0.05
-)
-
-seasonality_test(
-  ts.data = datasets::AirPassengers,
-  ts.freq = frequency(datasets::AirPassengers),
-  alpha.level = 0.05
-)
-
-seasonality_test(
-  ts.data = datasets::EuStockMarkets[, "DAX"],
-  ts.freq = frequency(datasets::EuStockMarkets[, "DAX"]),
-  alpha.level = 0.05
-)
-}
+\keyword{internal}
