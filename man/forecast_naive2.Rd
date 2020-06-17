@@ -2,7 +2,7 @@
 % Please edit documentation in R/forecast_naive2.R
 \name{forecast_naive2}
 \alias{forecast_naive2}
-\title{Title}
+\title{NAIVE2 Forecasts}
 \usage{
 forecast_naive2(ts.data, forecast.horizon, alpha.level = 0.05)
 }
@@ -18,7 +18,8 @@ test to detect seasonality. Default is 0.05.}
 A ts object of forecasted values obtained using the Naive2 method.
 }
 \description{
-Title
+Used to return the point forecasts using the Naive2 method. Code modified
+from the M4 Competition's original code.
 }
 \examples{
 forecast_naive2(
