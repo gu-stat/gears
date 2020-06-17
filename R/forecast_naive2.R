@@ -1,9 +1,7 @@
-# > NAIVE2 Forecasts ###################################################### ----
-
-# Used to return the point forecasts using the Naive2 method.
-# Code modified from the M4 Competition's original code.
-
-#' Title
+#' NAIVE2 Forecasts
+#'
+#' Used to return the point forecasts using the Naive2 method. Code modified
+#' from the M4 Competition's original code.
 #'
 #' @param ts.data A numeric vector of time series observations (a ts object).
 #' @param forecast.horizon A numeric value with the length of the forecast lead.
@@ -11,6 +9,7 @@
 #'     test to detect seasonality. Default is 0.05.
 #'
 #' @return A ts object of forecasted values obtained using the Naive2 method.
+#' @export
 #'
 #' @examples
 #' forecast_naive2(
@@ -32,7 +31,7 @@
 #' )
 forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
-  tmp.ts.freq <- frequency(ts.data)
+  tmp.ts.freq <- stats::frequency(ts.data)
 
   tmp.seasonality.test <- FALSE
 
@@ -52,14 +51,14 @@ forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
   if (isTRUE(tmp.seasonality.test)){
 
-    tmp.decomp <- decompose(ts.data, type = "multiplicative")
+    tmp.decomp <- stats::decompose(ts.data, type = "multiplicative")
 
     deseason.ts.data <- ts.data/tmp.decomp$seasonal
 
     tmp.start <- length(tmp.decomp$seasonal) - tmp.ts.freq + 1
     tmp.end   <- length(tmp.decomp$seasonal)
 
-    SIout <- head(
+    SIout <- utils::head(
       rep(tmp.decomp$seasonal[tmp.start:tmp.end], forecast.horizon),
       forecast.horizon
     )
@@ -74,15 +73,15 @@ forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
   # |__ Forecasts: Naive =======================================================
 
-  last.deseason.ts.data <- tail(deseason.ts.data, 1)
+  last.deseason.ts.data <- utils::tail(deseason.ts.data, 1)
 
   tmp.forecast.horizon <- forecast.horizon - 1
 
-  tmp.time  <- tsp(deseason.ts.data)[2]
+  tmp.time  <- stats::tsp(deseason.ts.data)[2]
   tmp.start <- tmp.time + (1/tmp.ts.freq)
   tmp.end   <- tmp.start + (tmp.forecast.horizon * 1 / tmp.ts.freq)
 
-  forecast.naive <- ts(
+  forecast.naive <- stats::ts(
     data      = last.deseason.ts.data,
     start     = tmp.start,
     end       = tmp.end,
