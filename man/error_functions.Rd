@@ -18,15 +18,15 @@ error_functions(
   alpha.level = 0.05
 )
 
-fcn_MSE(method.forecasts, outsample)
+fcn_MSE(forecasts, outsample)
 
-fcn_MAD(method.forecasts, outsample)
+fcn_MAD(forecasts, outsample)
 
-fcn_SMAPE(method.forecasts, outsample)
+fcn_SMAPE(forecasts, outsample)
 
-fcn_MASE(method.forecasts, outsample, insample)
+fcn_MASE(forecasts, outsample, insample)
 
-fcn_OWA(method.forecasts, outsample, insample, forecast.horizon, alpha.level)
+fcn_OWA(forecasts, outsample, insample, forecast.horizon, alpha.level)
 }
 \arguments{
 \item{error.measure}{A character string with the name of the error measure.
@@ -65,7 +65,7 @@ measure.
 
 \examples{
 # Using NAIVE2:
-#' Observations until the 100th will be in the insample (train) data set.
+# Observations until the 100th will be in the insample (train) data set.
 tmp.cut.at <- 100
 
 tmp.forecast.horizon <- length(datasets::AirPassengers) - tmp.cut.at
@@ -75,7 +75,7 @@ tmp.orig.end   <- tsp(datasets::AirPassengers)[2]
 tmp.orig.freq  <- tsp(datasets::AirPassengers)[3]
 
 
-#' Get train data (insample)
+# Get train data (insample)
 
 tmp.train.start <- tmp.orig.start
 tmp.train.end   <- tmp.orig.start + ((tmp.cut.at - 1) * 1 / tmp.orig.freq)
@@ -87,7 +87,7 @@ tmp.train.data  <- window(
   frequency = tmp.orig.freq
 )
 
-#' Get test data (outsample)
+# Get test data (outsample)
 
 tmp.test.start <- tmp.orig.start + (tmp.cut.at * 1 / tmp.orig.freq)
 tmp.test.end   <- tmp.orig.end
@@ -99,14 +99,14 @@ tmp.test.data  <- window(
   frequency = tmp.orig.freq
 )
 
-#' Get Forecasts
+# Get Forecasts
 tmp.forecasts <- forecast_naive2(
   ts.data          = tmp.train.data,
   forecast.horizon = tmp.forecast.horizon,
   alpha.level      = 0.05
 )
 
-#' Get MSE
+# Get MSE
 
 error_functions(
   error.measure      = "mse",
@@ -117,7 +117,7 @@ error_functions(
   alpha.level        = 0.05
 )
 
-#' Get OWA
+# Get OWA
 
 error_functions(
   error.measure      = "owa",
