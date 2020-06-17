@@ -51,10 +51,11 @@ the Y (left-hand side) variable (see Details). Can be NULL (default) if
 the past values of the Y variable are not included in the model.}
 
 \item{x.names}{List with names of the X (right-hand side) variables that
-    have a maximum number of lags (see Details). Can be NULL (default) if
-    univariate model or if your model does not have variables of this type.
-#' @param x.max.lags List of numeric values that give the maximum number of lags
-    of the X (right-hand side) variables. Can be NULL (default).}
+have a maximum number of lags (see Details). Can be NULL (default) if
+univariate model or if your model does not have variables of this type.}
+
+\item{x.max.lags}{List of numeric values that give the maximum number of lags
+of the X (right-hand side) variables. Can be NULL (default).}
 
 \item{x.fixed.names}{List with names of the X (right-hand side) variables
 that have a fixed number of lags (see Details).
@@ -101,8 +102,9 @@ will be estimated (one with \code{betas.selection == "last"} and
 another with \code{betas.selection == "average"}).}
 
 \item{parallel.use}{Boolean. Whether or not parallel computing should be
-used. \code{gears_optim} uses the \code{\link[future.apply]} package
-\url(https://github.com/HenrikBengtsson/future.apply)}
+used. \code{gears_optim} uses the
+\url{https://github.com/HenrikBengtsson/future.apply}{future.apply}
+package.}
 
 \item{DATA.insample}{Training data set. Either as a data frame object, or
 a time series (ts) object.}
