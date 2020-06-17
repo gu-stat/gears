@@ -12,3 +12,8 @@ LazyData: true
 RoxygenNote: 7.1.0
 Depends: 
     R (>= 2.10)
+Imports:
+    stats,
+    utils
+Suggests:
+    future.apply
