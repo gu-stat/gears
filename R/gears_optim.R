@@ -19,7 +19,7 @@
 #' @param x.names List with names of the X (right-hand side) variables that
 #'     have a maximum number of lags (see Details). Can be NULL (default) if
 #'     univariate model or if your model does not have variables of this type.
-#' #' @param x.max.lags List of numeric values that give the maximum number of lags
+#' @param x.max.lags List of numeric values that give the maximum number of lags
 #'     of the X (right-hand side) variables. Can be NULL (default).
 #' @param x.fixed.names List with names of the X (right-hand side) variables
 #'     that have a fixed number of lags (see Details).
@@ -57,8 +57,9 @@
 #'     will be estimated (one with \code{betas.selection == "last"} and
 #'     another with \code{betas.selection == "average"}).
 #' @param parallel.use Boolean. Whether or not parallel computing should be
-#'     used. \code{gears_optim} uses the \code{\link[future.apply]} package
-#'     \url(https://github.com/HenrikBengtsson/future.apply)
+#'     used. \code{gears_optim} uses the
+#'     \url{https://github.com/HenrikBengtsson/future.apply}{future.apply}
+#'     package.
 #' @param DATA.insample Training data set. Either as a data frame object, or
 #'     a time series (ts) object.
 #' @param DATA.outsample Testing data set. Either as a data frame object, or
@@ -84,7 +85,6 @@
 #'     }
 #' @export
 #'
-#' @examples
 gears_optim <- function(DATA,
                         forecast.horizon,
                         search.size.rs,
@@ -141,13 +141,21 @@ gears_optim <- function(DATA,
       forecasts     = tmp_out_forecasts,
       outsample     = DATA.outsample
     )
-
-    tmp_owa <- fcn_owa(
-      forecasts.values = tmp_out_forecasts,
-      insample         = DATA.insample,
-      outsample        = DATA.outsample,
-      forecast.horizon = forecast.horizon
+    # TODO: VER PROBLEMAS AQUI APOS MUDANCAS EM fcn_OWA
+    tmp_owa <- error_functions(
+      error.measure      = "owa",
+      forecasts          = tmp_out_forecasts,
+      outsample          = DATA.outsample,
+      insample           = DATA.insample,
+      forecast.horizon   = forecast.horizon,
+      alpha.level        = 0.05
     )
+    # tmp_owa <- fcn_OWA(
+    #   forecasts.values = tmp_out_forecasts,
+    #   insample         = DATA.insample,
+    #   outsample        = DATA.outsample,
+    #   forecast.horizon = forecast.horizon
+    # )
 
     tmp_results <- c(
       "Out_MAD"          = tmp_mad,
@@ -215,10 +223,10 @@ gears_optim <- function(DATA,
   # > RUN GEARS ########################################################### ----
 
   if (parallel.use == TRUE) {
+    # TODO: VER EFEITOS DE USAR 'multisession' E NAO multisession (SEM ASPAS)
+    future.apply::plan('multisession')
 
-    plan(multisession)
-
-    results_gears <- future_lapply(
+    results_gears <- future.apply::future_lapply(
       X = seq_along(search.size.rs),
       function(SIZE.RS = X) {
         do.call(rbind, lapply(
