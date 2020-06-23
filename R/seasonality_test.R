@@ -16,24 +16,24 @@
 #' @return A boolean indicating whether or not the ts object has seasonality.
 #'
 #' @keywords internal
-# @examples
-# seasonality_test(
-#   ts.data = datasets::WWWusage,
-#   ts.freq = frequency(datasets::WWWusage),
-#   alpha.level = 0.05
-# )
+#' @examples
+#' seasonality_test(
+#'   ts.data = datasets::WWWusage,
+#'   ts.freq = frequency(datasets::WWWusage),
+#'   alpha.level = 0.05
+#' )
 #
-# seasonality_test(
-#   ts.data = datasets::AirPassengers,
-#   ts.freq = frequency(datasets::AirPassengers),
-#   alpha.level = 0.05
-# )
+#' seasonality_test(
+#'  ts.data = datasets::AirPassengers,
+#'   ts.freq = frequency(datasets::AirPassengers),
+#'   alpha.level = 0.05
+#' )
 #
-# seasonality_test(
-#   ts.data = datasets::EuStockMarkets[, "DAX"],
-#   ts.freq = frequency(datasets::EuStockMarkets[, "DAX"]),
-#   alpha.level = 0.05
-# )
+#' seasonality_test(
+#'   ts.data = datasets::EuStockMarkets[, "DAX"],
+#'   ts.freq = frequency(datasets::EuStockMarkets[, "DAX"]),
+#'   alpha.level = 0.05
+#' )
 seasonality_test <- function(ts.data, ts.freq, alpha.level = 0.05){
 
   tmp.tcrit <- stats::qnorm(1 - alpha.level)
