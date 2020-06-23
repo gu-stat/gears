@@ -45,20 +45,20 @@
 #'     to enter the right-hand side of the equation.
 #'
 #' @keywords internal
-# @examples
-# all_models_rhs(y.name = "PORK_PRICE", y.max.lags = 2, use.intercept = "both")
-#
-# all_models_rhs(
-#   y.name              = "PORK_PRICE" ,
-#   y.max.lags          = NULL,
-#   x.names             = list("BEEF_PRICE") ,
-#   x.max.lags          = list(3),
-#   x.fixed.names       = list("CORN_PRICE", "CORN_PRICE") ,
-#   x.fixed.lags        = list(4, 5),
-#   x.interaction.names = list("CORN_PRICE*CORN_PRICE", "BEEF_PRICE*WHEAT_PRICE"),
-#   x.interaction.lags  = list(c(1, 1), c(3,3)),
-#   use.intercept       = "without"
-# )
+#' @examples
+#' all_models_rhs(y.name = "PORK_PRICE", y.max.lags = 2, use.intercept = "both")
+#'
+#' all_models_rhs(
+#'   y.name              = "PORK_PRICE" ,
+#'   y.max.lags          = NULL,
+#'   x.names             = list("BEEF_PRICE") ,
+#'   x.max.lags          = list(3),
+#'   x.fixed.names       = list("CORN_PRICE", "CORN_PRICE") ,
+#'   x.fixed.lags        = list(4, 5),
+#'   x.interaction.names = list("CORN_PRICE*CORN_PRICE", "BEEF_PRICE*WHEAT_PRICE"),
+#'   x.interaction.lags  = list(c(1, 1), c(3,3)),
+#'   use.intercept       = "without"
+#' )
 all_models_rhs <- function(y.name = NULL,
                            y.max.lags = NULL,
                            x.names = NULL,
