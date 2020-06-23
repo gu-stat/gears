@@ -4,6 +4,7 @@
 #' from the M4 Competition's original code.
 #'
 #' @param ts.data A numeric vector of time series observations (a ts object).
+#' @param ts.freq The frequency of a ts object.
 #' @param forecast.horizon A numeric value with the length of the forecast lead.
 #' @param alpha.level A numeric value with the alpha level to be used in the
 #'     test to detect seasonality. Default is 0.05.
@@ -14,34 +15,43 @@
 #' @examples
 #' forecast_naive2(
 #' ts.data          = datasets::WWWusage,
+#' ts.freq          = stats::frequency(datasets::WWWusage),
 #' forecast.horizon = 10,
 #' alpha.level      = 0.05
 #' )
 #'
 #' forecast_naive2(
 #'   ts.data          = datasets::AirPassengers,
+#'   ts.freq          = stats::frequency(datasets::AirPassengers),
 #'   forecast.horizon = 15,
 #'   alpha.level      = 0.05
 #' )
 #'
 #' forecast_naive2(
 #'   ts.data          = datasets::EuStockMarkets[, "DAX"],
+#'   ts.freq          = stats::frequency(datasets::EuStockMarkets[, "DAX"]),
 #'   forecast.horizon = 40,
 #'   alpha.level      = 0.05
 #' )
-forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
-
-  tmp.ts.freq <- stats::frequency(ts.data)
+forecast_naive2 <- function(ts.data, ts.freq, forecast.horizon,
+                            alpha.level = 0.05){
 
   tmp.seasonality.test <- FALSE
 
+  if (is.ts(ts.data) == FALSE){
+    tmp.ts.data <- ts(ts.data, frequency = ts.freq)
+  } else {
+    tmp.ts.data <- ts.data
+  }
+
+
   # |__ Seasonality Test =======================================================
 
-  if (tmp.ts.freq > 1){
+  if (ts.freq > 1){
 
     tmp.seasonality.test <- seasonality_test(
-      ts.data     = ts.data,
-      ts.freq     = tmp.ts.freq,
+      ts.data     = tmp.ts.data,
+      ts.freq     = ts.freq,
       alpha.level = alpha.level
     )
 
@@ -51,11 +61,11 @@ forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
   if (isTRUE(tmp.seasonality.test)){
 
-    tmp.decomp <- stats::decompose(ts.data, type = "multiplicative")
+    tmp.decomp <- stats::decompose(tmp.ts.data, type = "multiplicative")
 
-    deseason.ts.data <- ts.data/tmp.decomp$seasonal
+    deseason.ts.data <- tmp.ts.data / tmp.decomp$seasonal
 
-    tmp.start <- length(tmp.decomp$seasonal) - tmp.ts.freq + 1
+    tmp.start <- length(tmp.decomp$seasonal) - ts.freq + 1
     tmp.end   <- length(tmp.decomp$seasonal)
 
     SIout <- utils::head(
@@ -65,7 +75,7 @@ forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
   } else {
 
-    deseason.ts.data <- ts.data
+    deseason.ts.data <- tmp.ts.data
 
     SIout <- rep(1, forecast.horizon)
 
@@ -77,15 +87,15 @@ forecast_naive2 <- function(ts.data, forecast.horizon, alpha.level = 0.05){
 
   tmp.forecast.horizon <- forecast.horizon - 1
 
-  tmp.time  <- stats::tsp(deseason.ts.data)[2]
-  tmp.start <- tmp.time + (1/tmp.ts.freq)
-  tmp.end   <- tmp.start + (tmp.forecast.horizon * 1 / tmp.ts.freq)
+  tmp.end.original  <- stats::tsp(deseason.ts.data)[2]
+  tmp.start.forecast <- tmp.end.original + (1/ts.freq)
+  tmp.end.forecast  <- tmp.start.forecast + (tmp.forecast.horizon * 1 / ts.freq)
 
   forecast.naive <- stats::ts(
     data      = last.deseason.ts.data,
-    start     = tmp.start,
-    end       = tmp.end,
-    frequency = tmp.ts.freq
+    start     = tmp.start.forecast,
+    end       = tmp.end.forecast,
+    frequency = ts.freq
   )
 
   # |__ Forecasts: Naive2 ======================================================
