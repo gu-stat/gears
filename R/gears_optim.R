@@ -83,7 +83,7 @@
 #'      \item{best_equations}{A data frame containing information about the best
 #'          equation fitted for each error measure and forecast horizon.}
 #'     }
-#' @export
+# @export
 #'
 gears_optim <- function(DATA,
                         forecast.horizon,
@@ -130,19 +130,19 @@ gears_optim <- function(DATA,
 
     tmp_out_forecasts <- as.numeric(out_forecasts[X, -c(1,2)])
 
-    tmp_mad <- error_functions(
+    tmp_mad <- error_measures(
       error.measure = "mad",
       forecasts     = tmp_out_forecasts,
       outsample     = DATA.outsample
     )
 
-    tmp_mse <- error_functions(
+    tmp_mse <- error_measures(
       error.measure = "mse",
       forecasts     = tmp_out_forecasts,
       outsample     = DATA.outsample
     )
     # TODO: VER PROBLEMAS AQUI APOS MUDANCAS EM fcn_OWA
-    tmp_owa <- error_functions(
+    tmp_owa <- error_measures(
       error.measure      = "owa",
       forecasts          = tmp_out_forecasts,
       outsample          = DATA.outsample,
