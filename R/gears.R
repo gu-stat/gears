@@ -40,12 +40,7 @@
 #'     \code{use.intercept == "with"}, then only the right-hand side equations
 #'     with intercept are returned.
 #' @param error.measure Error measure to be used when calculating the in-sample
-#'     prediction errors. Use \code{error.measure == "list"} if more than one
-#'     measure should be used. Then, add the list with measures to the
-#'     \code{error.measure.list} argument.
-#' @param error.measure.list List with the names of the error measures to be
-#'     used when calculating the in-sample prediction errors. Only use this if
-#'     \code{error.measure == "list"}.
+#'     forecast errors.
 #' @param betas.selection If \code{betas.selection == "last"}, the
 #'     estimated coefficients from the last rolling sample will be used to
 #'     obtain the out-of-sample forecasts. If
@@ -103,8 +98,7 @@
 #'   x.interaction.lags  = NULL,
 #'   last.obs            = length(datasets::WWWusage),
 #'   use.intercept       = "both",
-#'   error.measure       = "list",
-#'   error.measure.list  = list("mse", "mad"),
+#'   error.measure       = "mse",
 #'   betas.selection     = "last"
 #' )
 #'
@@ -188,8 +182,7 @@ gears <- function(DATA,
                   x.interaction.lags = NULL,
                   last.obs = NULL,
                   use.intercept = c("both", "without", "with"),
-                  error.measure = c("mse", "mae", "mase", "smape", "list"),
-                  error.measure.list = NULL,
+                  error.measure = c("mse", "mae", "mase", "smape", "owa"),
                   betas.selection = c("last", "average", "both"),
                   ...) { # ... TO ACCOUNT FOR OTHER OPTIONS PASSED TO glm
 
@@ -205,128 +198,6 @@ gears <- function(DATA,
   use.intercept <- match.arg(use.intercept)
 
   # > Helpers ############################################################# ----
-
-  # Fit-Predict ================================================================
-
-  fitPredict <- function(forecast.lead, eq.number, sample.number, ...) {
-
-    tmp_lhs      <- paste0(Y_name, "_plus_", forecast.lead)
-    tmp_equation <- paste0(tmp_lhs, all.equations.rhs[eq.number])
-
-    tmp_fit <- stats::glm(
-      formula = stats::as.formula(tmp_equation),
-      family  = glm.family,
-      data    = DF.Fit.Predict[[forecast.lead]]$data_fit[[sample.number]],
-      ...
-    )
-
-    if (length(tmp_fit$coefficients) > tmp_fit$rank) {
-      tmp_forecast <- NA
-    } else {
-      tmp_forecast <- stats::predict(
-        object  = tmp_fit,
-        newdata = DF.Fit.Predict[[forecast.lead]]$data_predict[[sample.number]],
-        type    = "response"
-      )
-    }
-
-    return(tmp_forecast)
-  }
-
-  # |__ Estimate the Best Equations ============================================
-
-  fitBest <- function(forecast.lead, eq.number, sample.number, ...) {
-
-    tmp_lhs      <- paste0(Y_name, "_plus_", forecast.lead)
-    tmp_equation <- paste0(tmp_lhs, all.equations.rhs[eq.number[forecast.lead]])
-
-    tmp_fit <- stats::glm(
-      formula = stats::as.formula(tmp_equation),
-      family  = glm.family,
-      data    = DF.Fit.Predict[[forecast.lead]]$data_fit[[sample.number]],
-      ...
-    )
-
-    return(tmp_fit)
-
-  }
-
-
-  # |__ Get Out-of-sample (ex-post) Forecasts ==================================
-
-  outForecasts <- function(betas, ...) {
-
-    # |__ Betas Selection ------------------------------------------------------
-
-    if (betas == "last") {
-
-      fcn.betas <- function(X, errorMeasure, ...) {
-
-        tmp_fit <- estimates.best[[errorMeasure]][[X]][[number.rs]]
-
-        tmp_forecast <- stats::predict(
-          object  = tmp_fit,
-          newdata = DF.Forecast[last.obs, ],
-          type    = "response"
-        )
-
-        names(tmp_forecast) <- sum(last.obs + X)
-
-        return(tmp_forecast)
-
-      }
-
-    } else if (betas == "average") {
-
-      fcn.betas <- function(X, errorMeasure, ...) {
-
-        tmp_h <- X
-
-        tmp_coeff <- lapply(
-          X = 1:number.rs,
-          function(X) estimates.best[[errorMeasure]][[tmp_h]][[X]]$coefficients
-        )
-
-        tmp_coeff    <- do.call(rbind, tmp_coeff)
-        avg_coeff    <- apply(tmp_coeff, 2, mean)
-
-        if ("(Intercept)" %in% names(avg_coeff)) {
-
-          tmp_names <- names(avg_coeff)[which(names(avg_coeff)!="(Intercept)")]
-
-          tmp_forecast <- sum(
-            avg_coeff[tmp_names] * DF.Forecast[last.obs, tmp_names]
-          )
-
-          tmp_forecast <- sum(tmp_forecast, avg_coeff["(Intercept)"])
-
-        } else {
-          tmp_forecast <- sum(
-            avg_coeff * DF.Forecast[last.obs, names(avg_coeff)]
-          )
-        }
-
-        names(tmp_forecast) <- sum(last.obs + tmp_h)
-
-        return(tmp_forecast)
-
-      }
-
-    }
-
-    out.forecasts <- lapply(
-      X = 1:length(prediction.errors),
-      function(Er = X) {
-        sapply(
-          X = 1:forecast.horizon,
-          errorMeasure = Er,
-          FUN = fcn.betas)
-      }
-    )
-
-    return(out.forecasts)
-
-  }
 
   # > DATA ################################################################ ----
 
@@ -398,7 +269,9 @@ gears <- function(DATA,
   # > ESTIMATION ########################################################## ----
 
   # |__ Fit and Predict ========================================================
-
+  ## Creates list where the first level is the forecast lead, and inside each
+  ## level there is a table returning the forecast by equation/model's number
+  ## (column) and rolling sample (row).
   prediction.gears <- lapply(
     X   = 1:forecast.horizon,
     function(h = X) {
@@ -407,10 +280,10 @@ gears <- function(DATA,
         function(Eq = X) {
           sapply(
             X                = 1:number.rs,
-            FUN              = fitPredict,
+            FUN              = gears:::fit_predict,
             forecast.lead    = h,
             eq.number        = Eq,
-            ...
+            ... # further arguments passed on to glm
           )
         }
       )
@@ -419,25 +292,11 @@ gears <- function(DATA,
 
   # |__ Get Prediction Errors ==================================================
 
-  # if (error.measure == "list") {
-  #
-  #   if (is.null(error.measure.list)) {
-  #     warning(paste0(
-  #       "If error.measure = 'list', you must provide a list of measures with",
-  #       " error.measure.list = list()"
-  #     ))
-  #   }
-  #
-  #   prediction.errors <- lapply(
-  #     error.measure.list, predictionError, forecast.horizon, ...
-  #   )
-  #
-  # } else {
-  #   prediction.errors <- list(predictionError(
-  #     error.measure, forecast.horizon, ...
-  #   ))
-  # }
-  prediction.errors.all <- forecast_errors(
+  ## \____ All measures --------------------------------------------------------
+  ## Creates a list where the first level is the forecast lead, and inside each
+  ## level there is a table returning the prediction errors by equation/model's
+  ## number (row) and error measure (column)
+  prediction.errors.all <- gears:::forecast_errors(
     DATA,
     forecast.horizon,
     Y_name,
@@ -447,6 +306,9 @@ gears <- function(DATA,
     forecasts.gears = prediction.gears
   )
 
+  ## \____ User's measure-------------------------------------------------------
+  ## Returns a table with the prediction errors by equation/model's number (row)
+  ## and forecast lead (column).
   prediction.errors <- sapply(
     X = 1:forecast.horizon,
     function(X) prediction.errors.all[[X]][, error.measure]
@@ -458,21 +320,17 @@ gears <- function(DATA,
   equations.min <- apply(prediction.errors, 2, which.min)
 
   # |__ Estimate Best Model ====================================================
-
+  ## Returns a list of size equal to forecast.horizon. Each level returns the
+  ## glm object associated with the forecast lead and its best equation.
   estimates.best <- lapply(
-    X = 1:length(prediction.errors),
-    function(Er = X) {
+    X   = 1:forecast.horizon,
+    function(h = X) {
       lapply(
-        X   = 1:forecast.horizon,
-        function(h = X) {
-          lapply(
-            X                = 1:number.rs,
-            forecast.lead    = h,
-            eq.number        = equations.min[[Er]],
-            FUN              = fitBest,
-            ...
-          )
-        }
+        X                = 1:number.rs,
+        forecast.lead    = h,
+        eq.number        = equations.min[h],
+        FUN              = gears:::fit_best,
+        ...
       )
     }
   )
@@ -486,13 +344,13 @@ gears <- function(DATA,
       out.forecasts1 <- cbind.data.frame(
         "error.measure" = do.call(rbind, error.measure.list),
         "betas.selection" = "average",
-        do.call(rbind, outForecasts(betas = "average", estimates.best))
+        do.call(rbind, out_forecasts(betas = "average", estimates.best))
       )
 
       out.forecasts2 <- cbind.data.frame(
         "error.measure" = do.call(rbind, error.measure.list),
         "betas.selection" = "last",
-        do.call(rbind, outForecasts(betas = "last", estimates.best))
+        do.call(rbind, out_forecasts(betas = "last", estimates.best))
       )
 
       out.forecasts <- rbind(out.forecasts1, out.forecasts2)
@@ -502,13 +360,13 @@ gears <- function(DATA,
       out.forecasts1 <- cbind.data.frame(
         error.measure,
         "betas.selection" = "average",
-        do.call(rbind, outForecasts(betas = "average", estimates.best))
+        do.call(rbind, out_forecasts(betas = "average", estimates.best))
       )
 
       out.forecasts2 <- cbind.data.frame(
         error.measure,
         "betas.selection" = "last",
-        do.call(rbind, outForecasts(betas = "last", estimates.best))
+        do.call(rbind, out_forecasts(betas = "last", estimates.best))
       )
 
       out.forecasts <- rbind(out.forecasts1, out.forecasts2)
@@ -521,7 +379,7 @@ gears <- function(DATA,
       out.forecasts <- cbind.data.frame(
         "error.measure" = do.call(rbind, error.measure.list),
         "betas.selection" = betas.selection,
-        do.call(rbind, outForecasts(betas = betas.selection, estimates.best))
+        do.call(rbind, out_forecasts(betas = betas.selection, estimates.best))
       )
 
     } else {
@@ -529,7 +387,7 @@ gears <- function(DATA,
       out.forecasts <- cbind.data.frame(
         error.measure,
         "betas.selection" = betas.selection,
-        do.call(rbind, outForecasts(betas = betas.selection, estimates.best))
+        do.call(rbind, out_forecasts(betas = betas.selection, estimates.best))
       )
 
     }
