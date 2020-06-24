@@ -20,10 +20,10 @@
 #' @param names_measures Character vector with the names of the error measures
 #'     used in \link[gears]{error_measures}.
 #'
-#' @return A list. First level of the list represents the different forecast
-#'     leads. The table inside each level returns the equation/model number
-#'     (row) and the error measure (column), and the values inside the cells
-#'     are the forecast errors.
+#' @return Returns a list. First level of this list represents the different
+#'     forecast leads. The table inside each level returns the equation/model's
+#'     number (row) and the error measure (column), and the values inside the
+#'     cells are the forecast errors.
 #' @keywords internal
 #'
 forecast_errors <- function(DATA,
