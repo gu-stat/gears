@@ -4,12 +4,12 @@
 \alias{seasonality_test}
 \title{Seasonality Test}
 \usage{
-seasonality_test(ts.data, ts.freq, alpha.level = 0.05)
+seasonality_test(ts.data, ts.frequency, alpha.level = 0.05)
 }
 \arguments{
 \item{ts.data}{A ts object (i.e., a vector of time series observations).}
 
-\item{ts.freq}{The frequency of a ts object.}
+\item{ts.frequency}{The frequency of a ts object.}
 
 \item{alpha.level}{The alpha level to be used in the test to detect
 seasonality. Default is 0.05.}

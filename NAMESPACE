@@ -3,4 +3,3 @@
 export(error_measures)
 export(forecast_naive2)
 export(gears)
-export(gears_optim)

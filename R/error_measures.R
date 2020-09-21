@@ -58,6 +58,7 @@
 #' # Get Forecasts
 #' tmp.forecasts <- gears::forecast_naive2(
 #'   ts.data          = tmp.train.data,
+#'   ts.frequency     = tmp.orig.freq,
 #'   forecast.horizon = tmp.forecast.horizon,
 #'   alpha.level      = 0.05
 #' )
@@ -78,32 +79,6 @@ error_measures <- function(forecasts,
                            forecast.horizon,
                            alpha.level = 0.05) {
 
-  # if (error.measure == "mse") {
-  #   tmp.error <- measure_MSE(forecasts = forecasts, outsample = outsample)
-  #
-  # } else if (error.measure == "mad") {
-  #   tmp.error <- measure_MAD(forecasts = forecasts, outsample = outsample)
-  #
-  # } else if (error.measure == "smape") {
-  #   tmp.error <- measure_SMAPE(forecasts = forecasts, outsample = outsample)
-  #
-  # } else if (error.measure == "mase") {
-  #   tmp.error <- measure_MASE(
-  #     forecasts = forecasts,
-  #     outsample        = outsample,
-  #     insample         = insample
-  #   )
-  #
-  # } else if (error.measure == "owa") {
-  #   tmp.error <- measure_OWA(
-  #     forecasts        = forecasts,
-  #     outsample        = outsample,
-  #     insample         = insample,
-  #     forecast.horizon = forecast.horizon,
-  #     alpha.level      = alpha.level
-  #   )
-  # }
-
   tmp.MSE   <- measure_MSE(forecasts = forecasts, outsample = outsample)
   tmp.MAD   <- measure_MAD(forecasts = forecasts, outsample = outsample)
   tmp.SMAPE <- measure_SMAPE(forecasts = forecasts, outsample = outsample)
@@ -118,7 +93,7 @@ error_measures <- function(forecasts,
     forecasts        = forecasts,
     outsample        = outsample,
     insample         = insample,
-    ts.freq          = ts.frequency,
+    ts.frequency     = ts.frequency,
     forecast.horizon = forecast.horizon,
     alpha.level      = alpha.level
   )
@@ -173,12 +148,12 @@ measure_MASE <- function(forecasts, outsample, insample){
   tmp.outsample <- as.numeric(outsample)
   tmp.insample  <- as.numeric(insample)
 
-  ts.freq <- stats::frequency(insample)
+  ts.frequency <- stats::frequency(insample)
 
-  forecastsNaiveSD <- rep(NA, ts.freq)
+  forecastsNaiveSD <- rep(NA, ts.frequency)
 
-  for (j in (ts.freq + 1):length(tmp.insample)){
-    forecastsNaiveSD <- c(forecastsNaiveSD, tmp.insample[j - ts.freq])
+  for (j in (ts.frequency + 1):length(tmp.insample)){
+    forecastsNaiveSD <- c(forecastsNaiveSD, tmp.insample[j - ts.frequency])
   }
 
   masep <- mean(abs(tmp.insample - forecastsNaiveSD), na.rm = TRUE)
@@ -190,14 +165,14 @@ measure_MASE <- function(forecasts, outsample, insample){
 
 #' @describeIn error_measures OWA - Overall Weighted Average
 measure_OWA <- function(forecasts, outsample, insample, forecast.horizon,
-                    alpha.level, ts.freq) {
+                        alpha.level, ts.frequency) {
 
   # \__ Naive2 -----------------------------------------------------------------
 
   ## \____ Get Forecasts ----
   tmp.forecasts.naive2 <- forecast_naive2(
     ts.data          = insample,
-    ts.freq          = ts.freq,
+    ts.frequency     = ts.frequency,
     forecast.horizon = forecast.horizon,
     alpha.level      = alpha.level
   )

@@ -10,10 +10,10 @@
 \title{Functions to calculate the forecast errors.}
 \usage{
 error_measures(
-  error.measure,
   forecasts,
   outsample,
   insample = NULL,
+  ts.frequency,
   forecast.horizon,
   alpha.level = 0.05
 )
@@ -26,17 +26,23 @@ measure_SMAPE(forecasts, outsample)
 
 measure_MASE(forecasts, outsample, insample)
 
-measure_OWA(forecasts, outsample, insample, forecast.horizon, alpha.level)
+measure_OWA(
+  forecasts,
+  outsample,
+  insample,
+  forecast.horizon,
+  alpha.level,
+  ts.frequency
+)
 }
 \arguments{
-\item{error.measure}{A character string with the name of the error measure.
-These can be 'mse', 'mad', 'smape', 'mase', and 'owa' (see Details).}
-
 \item{forecasts}{A numeric vector with the point forecasts.}
 
 \item{outsample}{A numeric vector with the test data set.}
 
 \item{insample}{A numeric vector with the train data set.}
+
+\item{ts.frequency}{The frequency of a ts object.}
 
 \item{forecast.horizon}{A numeric value with the length of the forecast lead.}
 
@@ -44,11 +50,15 @@ These can be 'mse', 'mad', 'smape', 'mase', and 'owa' (see Details).}
 test to detect seasonality. Default is 0.05.}
 }
 \value{
-A numeric value with the forecast error.
+A 5-object list with the numeric values of the forecast error for
+    each one of the error measures.
 }
 \description{
-\code{error_measures} returns the forecast errors for the selected error
-measure.
+\code{error_measures} returns the forecast errors for the following error
+measures: MSE, MAD, sMAPE, MASE, and OWA.
+}
+\details{
+These can be 'mse', 'mad', 'smape', 'mase', and 'owa' (see Details).
 }
 \section{Functions}{
 \itemize{
@@ -102,27 +112,17 @@ tmp.test.data  <- stats::window(
 # Get Forecasts
 tmp.forecasts <- gears::forecast_naive2(
   ts.data          = tmp.train.data,
+  ts.frequency     = tmp.orig.freq,
   forecast.horizon = tmp.forecast.horizon,
   alpha.level      = 0.05
 )
 
-# Get MSE
-
+# Get error measures for the forecast
 error_measures(
-  error.measure      = "mse",
   forecasts          = tmp.forecasts,
   outsample          = tmp.test.data,
-  forecast.horizon   = tmp.forecast.horizon,
-  alpha.level        = 0.05
-)
-
-# Get OWA
-
-error_measures(
-  error.measure      = "owa",
-  forecasts          = tmp.forecasts,
-  outsample          = tmp.test.data,
-  insample           = tmp.test.data,
+  insample           = tmp.train.data,
+  ts.frequency       = tmp.orig.freq,
   forecast.horizon   = tmp.forecast.horizon,
   alpha.level        = 0.05
 )

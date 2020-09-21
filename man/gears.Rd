@@ -10,6 +10,8 @@ gears(
   size.rs,
   number.rs,
   glm.family = c("gaussian", "binomial", "poisson", "Gamma", "quasi"),
+  level = 95,
+  details = FALSE,
   y.name = NULL,
   y.max.lags = NULL,
   x.names = NULL,
@@ -20,8 +22,7 @@ gears(
   x.interaction.lags = NULL,
   last.obs = NULL,
   use.intercept = c("both", "without", "with"),
-  error.measure = c("mse", "mae", "mase", "smape", "list"),
-  error.measure.list = NULL,
+  error.measure = c("mse", "mae", "mase", "smape", "owa"),
   betas.selection = c("last", "average", "both"),
   ...
 )
@@ -37,6 +38,13 @@ gears(
 
 \item{glm.family}{A description of the error distribution to be used in the
 model. See \link[stats]{glm} for details.}
+
+\item{level}{Confidence level for prediction intervals. Numeric value
+between 0 and 100.}
+
+\item{details}{If \code{TRUE}, the function outputs the entire glm object for
+all random samples for each forecast lead. To save memory, the default
+is \code{FALSE}.}
 
 \item{y.name}{The name of the Y (left-hand side) variable. If NULL (default),
 the function creates a temporary name.}
@@ -79,13 +87,7 @@ possible right-hand side equations without intercept. If
 with intercept are returned.}
 
 \item{error.measure}{Error measure to be used when calculating the in-sample
-prediction errors. Use \code{error.measure == "list"} if more than one
-measure should be used. Then, add the list with measures to the
-\code{error.measure.list} argument.}
-
-\item{error.measure.list}{List with the names of the error measures to be
-used when calculating the in-sample prediction errors. Only use this if
-\code{error.measure == "list"}.}
+forecast errors.}
 
 \item{betas.selection}{If \code{betas.selection == "last"}, the
 estimated coefficients from the last rolling sample will be used to
@@ -138,6 +140,8 @@ gears(
   forecast.horizon    = 10,
   size.rs             = 20,
   number.rs           = 10,
+  level               = 95,
+  details             = FALSE,
   glm.family          = "quasi",
   y.name              = NULL,
   y.max.lags          = 2,
@@ -149,8 +153,7 @@ gears(
   x.interaction.lags  = NULL,
   last.obs            = length(datasets::WWWusage),
   use.intercept       = "both",
-  error.measure       = "list",
-  error.measure.list  = list("mse", "mad"),
+  error.measure       = "mse",
   betas.selection     = "last"
 )
 
@@ -158,10 +161,12 @@ gears(
 gears(
   DATA                = gears::commodities_prices,
   forecast.horizon    = 5,
-  size.rs             = 12,
-  number.rs           = 10,
+  size.rs             = 20,
+  number.rs           = 12,
+  level               = 95,
+  details             = FALSE,
   glm.family          = "quasi",
-  y.name              = "PORK_PRICE" ,
+  y.name              = "PORK_PRICE",
   y.max.lags          = 2,
   x.names             = NULL,
   x.max.lags          = NULL,
@@ -169,9 +174,9 @@ gears(
   x.fixed.lags        = NULL,
   x.interaction.names = NULL,
   x.interaction.lags  = NULL,
-  last.obs            = 150,
+  last.obs            = 100,
   use.intercept       = "both",
-  error.measure       = "mse" ,
+  error.measure       = "mse",
   betas.selection     = "last"
 )
 
@@ -181,6 +186,8 @@ gears(
   forecast.horizon    = 1,
   size.rs             = 12,
   number.rs           = 5,
+  level               = 95,
+  details             = FALSE,
   glm.family          = "quasi",
   y.name              = "PORK_PRICE" ,
   y.max.lags          = 1,
@@ -202,6 +209,8 @@ gears(
   forecast.horizon    = 1,
   size.rs             = 25,
   number.rs           = 5,
+  level               = 95,
+  details             = FALSE,
   glm.family          = "quasi",
   y.name              = "PORK_PRICE",
   y.max.lags          = 1,

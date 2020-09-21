@@ -7,6 +7,11 @@
 #' @param forecast.horizon Number of periods for forecasting.
 #' @param size.rs Number of observations in the rolling sample.
 #' @param number.rs Number of rolling samples.
+#' @param level Confidence level for prediction intervals. Numeric value
+#'     between 0 and 100.
+#' @param details If \code{TRUE}, the function outputs the entire glm object for
+#'     all random samples for each forecast lead. To save memory, the default
+#'     is \code{FALSE}.
 #' @param glm.family A description of the error distribution to be used in the
 #'     model. See \link[stats]{glm} for details.
 #' @param y.name The name of the Y (left-hand side) variable. If NULL (default),
@@ -87,6 +92,8 @@
 #'   forecast.horizon    = 10,
 #'   size.rs             = 20,
 #'   number.rs           = 10,
+#'   level               = 95,
+#'   details             = FALSE,
 #'   glm.family          = "quasi",
 #'   y.name              = NULL,
 #'   y.max.lags          = 2,
@@ -106,10 +113,12 @@
 #' gears(
 #'   DATA                = gears::commodities_prices,
 #'   forecast.horizon    = 5,
-#'   size.rs             = 12,
-#'   number.rs           = 10,
+#'   size.rs             = 20,
+#'   number.rs           = 12,
+#'   level               = 95,
+#'   details             = FALSE,
 #'   glm.family          = "quasi",
-#'   y.name              = "PORK_PRICE" ,
+#'   y.name              = "PORK_PRICE",
 #'   y.max.lags          = 2,
 #'   x.names             = NULL,
 #'   x.max.lags          = NULL,
@@ -117,9 +126,9 @@
 #'   x.fixed.lags        = NULL,
 #'   x.interaction.names = NULL,
 #'   x.interaction.lags  = NULL,
-#'   last.obs            = 150,
+#'   last.obs            = 100,
 #'   use.intercept       = "both",
-#'   error.measure       = "mse" ,
+#'   error.measure       = "mse",
 #'   betas.selection     = "last"
 #' )
 #'
@@ -129,6 +138,8 @@
 #'   forecast.horizon    = 1,
 #'   size.rs             = 12,
 #'   number.rs           = 5,
+#'   level               = 95,
+#'   details             = FALSE,
 #'   glm.family          = "quasi",
 #'   y.name              = "PORK_PRICE" ,
 #'   y.max.lags          = 1,
@@ -150,6 +161,8 @@
 #'   forecast.horizon    = 1,
 #'   size.rs             = 25,
 #'   number.rs           = 5,
+#'   level               = 95,
+#'   details             = FALSE,
 #'   glm.family          = "quasi",
 #'   y.name              = "PORK_PRICE",
 #'   y.max.lags          = 1,
@@ -172,6 +185,8 @@ gears <- function(DATA,
                   glm.family = c(
                     "gaussian", "binomial", "poisson", "Gamma", "quasi"
                   ),
+                  level = 95,
+                  details = FALSE,
                   y.name = NULL,
                   y.max.lags = NULL,
                   x.names = NULL,
@@ -201,9 +216,11 @@ gears <- function(DATA,
 
   # > DATA ################################################################ ----
 
-  # |__ DF.Fit.Predict =========================================================
+  # |__ DF Fit Predict =========================================================
+  ## Used as argument for the "fit_predict", "fit_best", and "prediction_erros"
+  ## functions.
 
-  DF.Fit.Predict <- gears:::create_DF_Fit_Predict(
+  dfFitPredict <- create_DF_Fit_Predict(
     DATA,
     forecast.horizon,
     size.rs,
@@ -219,9 +236,9 @@ gears <- function(DATA,
     last.obs
   )
 
-  # |__ DF.Forecast ============================================================
+  # |__ DF Forecast ============================================================
 
-  DF.Forecast <- gears:::create_DF_Forecast(
+  dfForecast <- create_DF_Forecast(
     DATA,
     forecast.horizon,
     y.name,
@@ -239,14 +256,14 @@ gears <- function(DATA,
   # |__ Y variable name ========================================================
 
   if (is.null(y.name)) {
-    Y_name <- "Y_t"
+    yName <- "Y_t"
   } else {
-    Y_name <- paste0(y.name, "_t")
+    yName <- paste0(y.name, "_t")
   }
 
   # |__ All equations rhs ======================================================
 
-  all.equations.rhs <- gears:::all_models_rhs(
+  allEquationsRhs <- all_models_rhs(
     y.name,
     y.max.lags,
     x.names,
@@ -260,30 +277,40 @@ gears <- function(DATA,
 
   # |__ Total Number of Equations ==============================================
 
-  total.equations <- length(all.equations.rhs)
+  totalEquations <- length(allEquationsRhs)
 
   # |__ Total Number of Equations Estimated ====================================
 
-  total.equations.estimated <- total.equations * number.rs * forecast.horizon
+  totalEquationsEstimated <- totalEquations * number.rs * forecast.horizon
 
   # > ESTIMATION ########################################################## ----
 
   # |__ Fit and Predict ========================================================
-  ## Creates list where the first level is the forecast lead, and inside each
-  ## level there is a table returning the forecast by equation/model's number
+  ## Returns a list where the first level is the forecast lead, and inside each
+  ## level there is a table that returns the forecast by equation/model number
   ## (column) and rolling sample (row).
-  prediction.gears <- lapply(
+
+  # TODO: https://www.r-bloggers.com/no-visible-binding-for-global-variable/
+  predictionGEARS <- lapply(
     X   = 1:forecast.horizon,
-    function(h = X) {
+    function(X) {
+      h <- X
       sapply(
-        X = 1:total.equations,
-        function(Eq = X) {
+        X = 1:totalEquations,
+        #function(Eq = X) {
+        function(X) {   # Using this instead of what's on the previous line to
+          Eq <- X       # address the issue: "no visible binding for global
+                        # variable" generated by "R CMD check"
           sapply(
-            X                = 1:number.rs,
-            FUN              = gears:::fit_predict,
-            forecast.lead    = h,
-            eq.number        = Eq,
-            ... # further arguments passed on to glm
+            X                 = 1:number.rs,
+            FUN               = fit_predict,
+            forecast.lead     = h,
+            eq.number         = Eq,
+            glm.family        = glm.family,
+            Y.name            = yName,
+            all.equations.rhs = allEquationsRhs,
+            DF.Fit.Predict    = dfFitPredict#,
+            #... # further arguments passed on to glm
           )
         }
       )
@@ -293,43 +320,63 @@ gears <- function(DATA,
   # |__ Get Prediction Errors ==================================================
 
   ## \____ All measures --------------------------------------------------------
-  ## Creates a list where the first level is the forecast lead, and inside each
-  ## level there is a table returning the prediction errors by equation/model's
-  ## number (row) and error measure (column)
-  prediction.errors.all <- gears:::forecast_errors(
+  ## Returns a list where the first level is the forecast lead, and inside each
+  ## level there is a table that returns the prediction errors by equation/
+  ## model number (row) and error measure (column)
+
+  predictionErrorsAll <- prediction_errors(
     DATA,
     forecast.horizon,
-    Y_name,
-    total.equations,
+    Y.name          = yName,
+    total.equations = totalEquations,
     number.rs,
-    DF.Fit.Predict,
-    forecasts.gears = prediction.gears
+    DF.Fit.Predict  = dfFitPredict,
+    forecasts.gears = predictionGEARS
   )
 
   ## \____ User's measure-------------------------------------------------------
-  ## Returns a table with the prediction errors by equation/model's number (row)
-  ## and forecast lead (column).
-  prediction.errors <- sapply(
+  ## Returns a table with the prediction errors by equation/model number (row)
+  ## and forecast lead (column), only for the selected error measures.
+
+  predictionErrors <- sapply(
     X = 1:forecast.horizon,
-    function(X) prediction.errors.all[[X]][, error.measure]
+    function(X) predictionErrorsAll[[X]][, error.measure]
   )
+
   # > BEST EQUATION ####################################################### ----
 
   # |__ Get Equations that Min. Selected Error Function ========================
 
-  equations.min <- apply(prediction.errors, 2, which.min)
+  equationsMinError <- apply(predictionErrors, 2, which.min)
 
   # |__ Estimate Best Model ====================================================
-  ## Returns a list of size equal to forecast.horizon. Each level returns the
-  ## glm object associated with the forecast lead and its best equation.
-  estimates.best <- lapply(
+
+  ## Returns a list of size equal to forecast.horizon. The first level is the
+  ## forecast lead. The second level is given by the number of the particular
+  ## rolling sample. The output is the glm object associated with the best
+  ## equation (that minimizes the prediction errors), for each rolling sample
+  ## and each forecast lead.
+  ## E.g., best_model[[2]][[1]]  returns the glm object for the second
+  ##                       ...   forecast lead, and for the first equation
+  ##                       ...   number.
+  ##                       [[number.rs]
+  ##
+
+  bestModel <- lapply(
     X   = 1:forecast.horizon,
-    function(h = X) {
+    #function(h = X) {
+    function(X) {   # Using this instead of what's on the previous line to
+      h <- X        # address the issue: "no visible binding for global
+      # variable" generated by "R CMD check"
       lapply(
-        X                = 1:number.rs,
-        forecast.lead    = h,
-        eq.number        = equations.min[h],
-        FUN              = gears:::fit_best,
+        X                 = 1:number.rs,
+        forecast.lead     = h,
+        eq.number         = equationsMinError[h],
+        FUN               = fit_best,
+        glm.family        = glm.family,
+        Y.name            = yName,
+        all.equations.rhs = allEquationsRhs,
+        DF.Fit.Predict    = dfFitPredict,
         ...
       )
     }
@@ -337,160 +384,181 @@ gears <- function(DATA,
 
   # > Out-of-Sample Forecasts ############################################# ----
 
-  if (betas.selection == "both") {
+  # |__ Get Forecasts for all random samples ===================================
 
-    if (error.measure == "list") {
-
-      out.forecasts1 <- cbind.data.frame(
-        "error.measure" = do.call(rbind, error.measure.list),
-        "betas.selection" = "average",
-        do.call(rbind, out_forecasts(betas = "average", estimates.best))
+  outSampleForecastsAll <- sapply(
+    X   = 1:forecast.horizon,
+    #function(h = X) {
+    function(X) {   # Using this instead of what's on the previous line to
+      h <- X        # address the issue: "no visible binding for global
+                    # variable" generated by "R CMD check"
+      sapply(
+        X = 1:number.rs,
+        function(X) {
+          stats::predict(
+            object  = bestModel[[h]][[X]],
+            newdata = dfForecast[last.obs, ],
+            type    = "response"
+          )
+        }
       )
-
-      out.forecasts2 <- cbind.data.frame(
-        "error.measure" = do.call(rbind, error.measure.list),
-        "betas.selection" = "last",
-        do.call(rbind, out_forecasts(betas = "last", estimates.best))
-      )
-
-      out.forecasts <- rbind(out.forecasts1, out.forecasts2)
-
-    } else {
-
-      out.forecasts1 <- cbind.data.frame(
-        error.measure,
-        "betas.selection" = "average",
-        do.call(rbind, out_forecasts(betas = "average", estimates.best))
-      )
-
-      out.forecasts2 <- cbind.data.frame(
-        error.measure,
-        "betas.selection" = "last",
-        do.call(rbind, out_forecasts(betas = "last", estimates.best))
-      )
-
-      out.forecasts <- rbind(out.forecasts1, out.forecasts2)
-
     }
+  )
 
+  ## \____ Get the Forecasts based on the user's Betas selection ---------------
+
+  if (betas.selection == "last") {
+    outSampleForecasts <- outSampleForecastsAll[number.rs, ]
+  } else if (betas.selection == "average") {
+    outSampleForecasts <- colMeans(outSampleForecastsAll)
   } else {
-    if (error.measure == "list") {
-
-      out.forecasts <- cbind.data.frame(
-        "error.measure" = do.call(rbind, error.measure.list),
-        "betas.selection" = betas.selection,
-        do.call(rbind, out_forecasts(betas = betas.selection, estimates.best))
-      )
-
-    } else {
-
-      out.forecasts <- cbind.data.frame(
-        error.measure,
-        "betas.selection" = betas.selection,
-        do.call(rbind, out_forecasts(betas = betas.selection, estimates.best))
-      )
-
-    }
+    outSampleForecasts <- rbind(
+      outSampleForecastsAll[number.rs, ],
+      colMeans(outSampleForecastsAll)
+    )
   }
 
   # > Results GEAR ######################################################## ----
 
   # |_ Best Fitted Models ======================================================
 
-  fitted_best <- estimates.best
+  #> bestModel
 
-  # |_ Out-of-Sample Point Forecasts ===========================================
+  # |_ Best Equation for Each Forecast Lead ====================================
 
-  out_sample_point_forecasts <- out.forecasts
+  bestEquations <- as.character(lapply(
+    X = 1: forecast.horizon,
+    function(X) stats::formula(bestModel[[X]][[1]])
+  ))
 
-  # |_ In-sample Predictions ===================================================
+  # |_ Out-of-sample Predictions - Best Model ==================================
+  ## \hat{y}_{89}, ..., \hat{y}_100
+  ## Calling it "in-sample predictions to avoid confusion"
 
-  ## \__ Point Estimates -------------------------------------------------------
-
-  insample_point_estimates <- lapply(
-    X = 1:length(prediction.errors),
-    function(Er = X) {
-      sapply(
-        X = 1:forecast.horizon,
-        function(H = X) {
-          EQ <- equations.min[[Er]][H]
-          prediction.gears[[H]][, EQ]
-        }
-      )
+  inSamplePredictions <- sapply(
+    X = 1:forecast.horizon,
+    #function(h = X) {
+    function(X) {   # Using this instead of what's on the previous line to
+      h <- X        # address the issue: "no visible binding for global
+                    # variable" generated by "R CMD check"
+      eq <- equationsMinError[h]
+      predictionGEARS[[h]][, eq]
     }
   )
 
-  ## \__ Errors ----------------------------------------------------------------
-  # TODO: GET INSAMPLE ERRORS
+  # |_ Mean Out-of-sample Prediction Errors - Best Model =======================
 
-  ## \__ Mean Error Measure ----------------------------------------------------
-
-  tmp_insample_mean_error_measure <- lapply(
-    X = 1:length(prediction.errors),
-    function(Er = X) {
-      sapply(
-        X = 1:forecast.horizon,
-        function(X) prediction.errors[[Er]][equations.min[[Er]][X], X]
-      )
+  meanPredictionErrors <- sapply(
+    X = 1:forecast.horizon,
+    #function(h = X) {
+    function(X) {   # Using this instead of what's on the previous line to
+      h <- X        # address the issue: "no visible binding for global
+      # variable" generated by "R CMD check"
+      eq <- equationsMinError[h]
+      predictionErrorsAll[[h]][eq, ]
     }
   )
 
-  if (error.measure == "list") {
-    tmp_insample_mean_error_measure <- cbind.data.frame(
-      do.call(rbind, error.measure.list),
-      do.call(rbind, tmp_insample_mean_error_measure)
+  meanPredictionErrorsUser <- cbind(
+    seq(1:forecast.horizon),
+    meanPredictionErrors[error.measure, ]
+  )
+
+  colnames(meanPredictionErrorsUser) <- c("forecast.lead", error.measure)
+
+  ## |_ Get Prediction Interval ================================================
+
+  ## TODO: Use df = best_model[[1]][[1]]$df.residual to get df based on degrees
+  ## of freedom from the model (depends on the number of parameters)
+  ## OR
+  ## Use = size.rs - 2 or Use number.rs - 2 since numbers.rs is what was used to
+  ## calculate the MSE?
+  ## Going with number.rs - 2 for now.
+
+  tCrit <- stats::qt(
+    p = 0.5 - level / 200,
+    df = number.rs - 2,
+    lower.tail = FALSE
+  )
+
+  tmp_lower_fct <- function(X, forecasts.gears) {
+    forecasts.gears[X] - tCrit * meanPredictionErrors["mse", X]
+  }
+
+  tmp_upper_fct <- function(X, forecasts.gears) {
+    forecasts.gears[X] + tCrit * meanPredictionErrors["mse", X]
+  }
+
+  if (betas.selection != "both"){
+    lower <- sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts)
+    upper <- sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts)
+  } else {
+    lower <- rbind(
+      sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts[1, ]),
+      sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts[2, ])
     )
 
-  } else {
-    tmp_insample_mean_error_measure <- cbind.data.frame(
-      error.measure,
-      do.call(rbind, tmp_insample_mean_error_measure)
+    upper <- rbind(
+      sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts[1, ]),
+      sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts[2, ])
     )
   }
 
-  names(tmp_insample_mean_error_measure) <- c(
-    "error.measure",
-    paste0("mean.value.for.h.", 1:forecast.horizon)
-  )
+  names(lower) <- names(upper) <- NULL
 
-  best_equations <- lapply(
-    X = 1:length(prediction.errors),
-    function(Er = X) {
-      paste0(
-        paste0(Y_name, "_plus_", 1:forecast.horizon),
-        all.equations.rhs[equations.min[[Er]]]
-      )
-    }
-  )
+  ## |_ Create Details Object ==================================================
 
-  if (error.measure == "list") {
-    best_equations <- cbind.data.frame(
-      do.call(rbind, error.measure.list),
-      do.call(rbind, best_equations)
+  if (isTRUE(details)) {
+    detailsGEARS <- lapply(
+      X = 1:forecast.horizon,
+      function(X) {
+        list(
+          best_equation = bestEquations[X],
+          best_models   = c(bestModel[[X]]),
+          fitted        = inSamplePredictions[ , X],
+          residuals     = inSamplePredictions[ , X] -
+            dfForecast[(last.obs - number.rs + 1):last.obs, yName]
+        )
+      }
     )
-
   } else {
-    best_equations <- cbind.data.frame(
-      error.measure,
-      do.call(rbind, best_equations)
+    detailsGEARS <- lapply(
+      X = 1:forecast.horizon,
+      function(X) {
+        list(
+          best_equation = bestEquations[X],
+          fitted        = inSamplePredictions[ , X],
+          residuals     = inSamplePredictions[ , X] -
+            dfForecast[(last.obs - number.rs + 1):last.obs, yName]
+        )
+      }
     )
   }
 
-  names(best_equations) <- c(
-    "error.measure",
-    paste0("best.eq.for.h.", 1:forecast.horizon)
-  )
+  tmpDetailsNames <- paste0("forecast_lead_", 1:forecast.horizon)
+
+  names(detailsGEARS) <- tmpDetailsNames
 
   # > Return Results ###################################################### ----
 
-  return(list(
-    "fitted_best"                 = fitted_best,
-    "out_sample_point_forecasts"  = out_sample_point_forecasts,
-    "insample_point_estimates"    = insample_point_estimates,
-    "insample_mean_error_measure" = tmp_insample_mean_error_measure,
-    "best_equations"              = best_equations
-  ))
+  outGEARS <- list(
+    out_sample_forecasts  = outSampleForecasts,
+    lower                 = lower,
+    upper                 = upper,
+    level                 = level,
+    betas                 = betas.selection,
+    error_measure         = error.measure,
+    min_prediction_errors = meanPredictionErrorsUser,
+    details               = detailsGEARS
+  )
 
+  outGEARS$model$call <- match.call()
+
+  return(structure(outGEARS, class = "gears"))
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ----
 } # UNCOMMENT THIS WHEN DONE WITH FUNCTION, TO CLOSE MAIN BRACKET
+print.gears <- function(x, ...){
+  #print(paste0("Best GEARS Model:  ",x$best.title))
+  print(cbind(x$out_sample_forecasts, x$lower, x$upper))
+}
 # END ----

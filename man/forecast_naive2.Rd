@@ -4,10 +4,12 @@
 \alias{forecast_naive2}
 \title{NAIVE2 Forecasts}
 \usage{
-forecast_naive2(ts.data, forecast.horizon, alpha.level = 0.05)
+forecast_naive2(ts.data, ts.frequency, forecast.horizon, alpha.level = 0.05)
 }
 \arguments{
 \item{ts.data}{A numeric vector of time series observations (a ts object).}
+
+\item{ts.frequency}{The frequency of a ts object.}
 
 \item{forecast.horizon}{A numeric value with the length of the forecast lead.}
 
@@ -24,18 +26,21 @@ from the M4 Competition's original code.
 \examples{
 forecast_naive2(
 ts.data          = datasets::WWWusage,
+ts.frequency          = stats::frequency(datasets::WWWusage),
 forecast.horizon = 10,
 alpha.level      = 0.05
 )
 
 forecast_naive2(
   ts.data          = datasets::AirPassengers,
+  ts.frequency          = stats::frequency(datasets::AirPassengers),
   forecast.horizon = 15,
   alpha.level      = 0.05
 )
 
 forecast_naive2(
   ts.data          = datasets::EuStockMarkets[, "DAX"],
+  ts.frequency          = stats::frequency(datasets::EuStockMarkets[, "DAX"]),
   forecast.horizon = 40,
   alpha.level      = 0.05
 )
