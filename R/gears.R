@@ -64,8 +64,8 @@
 #'     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
 #'     to enter the right-hand side of the equation.
 #'
-#' @return An object of class "forecast.gears".
-#'     An object of class "forecast.gears" is a list containing the following
+#' @return An object of class "\code{gears}".
+#'     An object of class "\code{gears}" is a list containing the following
 #'     elements:
 #'     \describe{
 #'      \item{fitted_best}{A list containing information about
@@ -82,14 +82,15 @@
 #'      \item{best_equations}{A data frame containing information about the best
 #'          equation fitted for each error measure and forecast horizon.}
 #'     }
+#' @author Gustavo Varela-Alvarenga
 #'
-#' @export
+#' @keywords ts glm
 #'
 #' @examples
 #' # Univariate Time Series Forecasting - Data of class 'ts'.
 #' gears(
 #'   DATA                = datasets::WWWusage,
-#'   forecast.horizon    = 10,
+#'   forecast.horizon    = 12,
 #'   size.rs             = 20,
 #'   number.rs           = 10,
 #'   level               = 95,
@@ -177,7 +178,7 @@
 #'   error.measure       = "mse",
 #'   betas.selection     = "last"
 #' )
-
+#' @export
 gears <- function(DATA,
                   forecast.horizon,
                   size.rs,
@@ -210,7 +211,7 @@ gears <- function(DATA,
   # TODO: insample_point_estimates RETURNS THE SAME INFO TWICE IF
   # error.measure.list IS SPECIFIED.
   #
-  use.intercept <- match.arg(use.intercept)
+  #use.intercept <- match.arg(use.intercept)
 
   # > Helpers ############################################################# ----
 
@@ -290,7 +291,6 @@ gears <- function(DATA,
   ## level there is a table that returns the forecast by equation/model number
   ## (column) and rolling sample (row).
 
-  # TODO: https://www.r-bloggers.com/no-visible-binding-for-global-variable/
   predictionGEARS <- lapply(
     X   = 1:forecast.horizon,
     function(X) {
@@ -309,8 +309,8 @@ gears <- function(DATA,
             glm.family        = glm.family,
             Y.name            = yName,
             all.equations.rhs = allEquationsRhs,
-            DF.Fit.Predict    = dfFitPredict#,
-            #... # further arguments passed on to glm
+            DF.Fit.Predict    = dfFitPredict,
+            ... # further arguments passed on to glm
           )
         }
       )
@@ -418,7 +418,7 @@ gears <- function(DATA,
     )
   }
 
-  # > Results GEAR ######################################################## ----
+  # > Results GEARS ####################################################### ----
 
   # |_ Best Fitted Models ======================================================
 
@@ -506,6 +506,58 @@ gears <- function(DATA,
 
   names(lower) <- names(upper) <- NULL
 
+  ## |_ Transform Results to ts objects  =======================================
+
+  if (stats::is.ts(DATA)) {
+    tmpFreq     <- stats::frequency(DATA)
+    tmpStartOut <- stats::tsp(DATA)[2] + (1 / tmpFreq)
+    tmpStartX   <- stats::tsp(DATA)[2] + ((1 - number.rs) / tmpFreq)
+    tmpEndX     <- stats::tsp(DATA)[2]
+
+    tmpX <- stats::window(
+      x         = DATA,
+      start     = tmpStartX,
+      end       = tmpEndX,
+      frequency = tmpFreq
+    )
+
+  } else {
+    tmpFreq     <- 1
+    tmpStartOut <- last.obs + (1 / tmpFreq)
+    tmpStartX   <- last.obs + ((1 - number.rs) / tmpFreq)
+    tmpEndX     <- last.obs
+
+    tmpX <- stats::ts(
+      data      = DATA[, y.name],
+      start     = tmpStartX,
+      end       = tmpEndX,
+      frequency = tmpFreq
+    )
+  }
+
+  outSampleForecastsTS <- stats::ts(
+    data      = outSampleForecasts,
+    start     = tmpStartOut,
+    frequency = tmpFreq
+  )
+
+  lowerTS <- stats::ts(lower, start = tmpStartOut, frequency = tmpFreq)
+  upperTS <- stats::ts(upper, start = tmpStartOut, frequency = tmpFreq)
+
+  inSamplePredictionsTS <- lapply(
+    X = 1:forecast.horizon,
+    function(X) {
+      tmpFit <- stats::ts(as.numeric(inSamplePredictions[ , X]))
+      stats::tsp(tmpFit) <- stats::tsp(tmpX)
+      tmpFit
+    }
+  )
+
+  predictionErrorTS <- lapply(
+    X = 1:forecast.horizon,
+    function(X) inSamplePredictionsTS[[X]] - tmpX
+  )
+
   ## |_ Create Details Object ==================================================
 
   if (isTRUE(details)) {
@@ -513,11 +565,10 @@ gears <- function(DATA,
       X = 1:forecast.horizon,
       function(X) {
         list(
-          best_equation = bestEquations[X],
-          best_models   = c(bestModel[[X]]),
-          fitted        = inSamplePredictions[ , X],
-          residuals     = inSamplePredictions[ , X] -
-            dfForecast[(last.obs - number.rs + 1):last.obs, yName]
+          best_equation          = bestEquations[X],
+          best_models            = c(bestModel[[X]]),
+          in_sample_predictions  = inSamplePredictionsTS[[X]],
+          prediction_errors      = predictionErrorTS[[X]]
         )
       }
     )
@@ -526,10 +577,9 @@ gears <- function(DATA,
       X = 1:forecast.horizon,
       function(X) {
         list(
-          best_equation = bestEquations[X],
-          fitted        = inSamplePredictions[ , X],
-          residuals     = inSamplePredictions[ , X] -
-            dfForecast[(last.obs - number.rs + 1):last.obs, yName]
+          best_equation         = bestEquations[X],
+          in_sample_predictions = inSamplePredictionsTS[[X]],
+          prediction_errors     = predictionErrorTS[[X]]
         )
       }
     )
@@ -540,25 +590,23 @@ gears <- function(DATA,
   names(detailsGEARS) <- tmpDetailsNames
 
   # > Return Results ###################################################### ----
-
   outGEARS <- list(
-    out_sample_forecasts  = outSampleForecasts,
-    lower                 = lower,
-    upper                 = upper,
-    level                 = level,
-    betas                 = betas.selection,
-    error_measure         = error.measure,
-    min_prediction_errors = meanPredictionErrorsUser,
-    details               = detailsGEARS
+    out_sample_forecasts      = outSampleForecastsTS,
+    lower                     = lowerTS,
+    upper                     = upperTS,
+    x                         = tmpX,
+    total_equations           = totalEquations,
+    total_equations_estimated = totalEquationsEstimated,
+    level                     = level,
+    betas                     = betas.selection,
+    error_measure             = error.measure,
+    min_prediction_errors     = meanPredictionErrorsUser,
+    details                   = detailsGEARS
   )
 
   outGEARS$model$call <- match.call()
 
   return(structure(outGEARS, class = "gears"))
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ----
-} # UNCOMMENT THIS WHEN DONE WITH FUNCTION, TO CLOSE MAIN BRACKET
-print.gears <- function(x, ...){
-  #print(paste0("Best GEARS Model:  ",x$best.title))
-  print(cbind(x$out_sample_forecasts, x$lower, x$upper))
 }
 # END ----

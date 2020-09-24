@@ -101,8 +101,8 @@ another with \code{betas.selection == "average"}).}
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
 \value{
-An object of class "forecast.gears".
-    An object of class "forecast.gears" is a list containing the following
+An object of class "\code{gears}".
+    An object of class "\code{gears}" is a list containing the following
     elements:
     \describe{
      \item{fitted_best}{A list containing information about
@@ -137,7 +137,7 @@ If \code{y.max.lags} equals to a number, then all lags of
 # Univariate Time Series Forecasting - Data of class 'ts'.
 gears(
   DATA                = datasets::WWWusage,
-  forecast.horizon    = 10,
+  forecast.horizon    = 12,
   size.rs             = 20,
   number.rs           = 10,
   level               = 95,
@@ -226,3 +226,8 @@ gears(
   betas.selection     = "last"
 )
 }
+\author{
+Gustavo Varela-Alvarenga
+}
+\keyword{glm}
+\keyword{ts}
