@@ -12,6 +12,8 @@
 #' @param forecast.horizon A numeric value with the length of the forecast lead.
 #' @param alpha.level A numeric value with the alpha level to be used in the
 #'     test to detect seasonality. Default is 0.05.
+#' @param error.measure Error measure to be used when calculating the in-sample
+#'     prediction errors.
 #'
 #' @return A 5-object list with the numeric values of the forecast error for
 #'     each one of the error measures.
@@ -70,41 +72,70 @@
 #'   insample           = tmp.train.data,
 #'   ts.frequency       = tmp.orig.freq,
 #'   forecast.horizon   = tmp.forecast.horizon,
-#'   alpha.level        = 0.05
+#'   alpha.level        = 0.05,
+#'   error.measure      = "mse"
 #' )
 error_measures <- function(forecasts,
                            outsample,
                            insample = NULL,
                            ts.frequency,
                            forecast.horizon,
-                           alpha.level = 0.05) {
+                           alpha.level = 0.05,
+                           error.measure = NULL) {
 
-  tmp.MSE   <- measure_MSE(forecasts = forecasts, outsample = outsample)
-  tmp.MAD   <- measure_MAD(forecasts = forecasts, outsample = outsample)
-  tmp.SMAPE <- measure_SMAPE(forecasts = forecasts, outsample = outsample)
+  if (error.measure == "mse"){
+    tmpMeasure <- measure_MSE(forecasts = forecasts, outsample = outsample)
+  } else if (error.measure == "mad"){
+    tmpMeasure <- measure_MAD(forecasts = forecasts, outsample = outsample)
+  } else if (error.measure == "smape"){
+    tmpMeasure <- measure_SMAPE(forecasts = forecasts, outsample = outsample)
+  } else if (error.measure == "mase"){
+    tmpMeasure <- measure_MASE(
+     forecasts = forecasts,
+     outsample = outsample,
+     insample  = insample
+   )
+  } else if (error.measure == "owa"){
+    tmpMeasure <- measure_OWA(
+     forecasts        = forecasts,
+     outsample        = outsample,
+     insample         = insample,
+     ts.frequency     = ts.frequency,
+     forecast.horizon = forecast.horizon,
+     alpha.level      = alpha.level
+   )
+  }
 
-  tmp.MASE <- measure_MASE(
-    forecasts = forecasts,
-    outsample = outsample,
-    insample  = insample
-  )
+  tmp.error <- list(tmpMeasure)
 
-  tmp.OWA <- measure_OWA(
-    forecasts        = forecasts,
-    outsample        = outsample,
-    insample         = insample,
-    ts.frequency     = ts.frequency,
-    forecast.horizon = forecast.horizon,
-    alpha.level      = alpha.level
-  )
+  names(tmp.error) <- paste(error.measure)
 
- tmp.error <- list(
-   "mse"   = tmp.MSE,
-   "mad"   = tmp.MAD,
-   "smape" = tmp.SMAPE,
-   "mase"  = tmp.MASE,
-   "owa"   = tmp.OWA
- )
+ #  tmp.MSE   <- measure_MSE(forecasts = forecasts, outsample = outsample)
+ #  tmp.MAD   <- measure_MAD(forecasts = forecasts, outsample = outsample)
+ #  tmp.SMAPE <- measure_SMAPE(forecasts = forecasts, outsample = outsample)
+ #
+ #  tmp.MASE <- measure_MASE(
+ #    forecasts = forecasts,
+ #    outsample = outsample,
+ #    insample  = insample
+ #  )
+ #
+ #  tmp.OWA <- measure_OWA(
+ #    forecasts        = forecasts,
+ #    outsample        = outsample,
+ #    insample         = insample,
+ #    ts.frequency     = ts.frequency,
+ #    forecast.horizon = forecast.horizon,
+ #    alpha.level      = alpha.level
+ #  )
+ #
+ # tmp.error <- list(
+ #   "mse"   = tmp.MSE,
+ #   "mad"   = tmp.MAD,
+ #   "smape" = tmp.SMAPE,
+ #   "mase"  = tmp.MASE,
+ #   "owa"   = tmp.OWA
+ # )
 
 
   # |__ RETURN =================================================================

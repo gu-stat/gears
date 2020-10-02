@@ -87,7 +87,7 @@ possible right-hand side equations without intercept. If
 with intercept are returned.}
 
 \item{error.measure}{Error measure to be used when calculating the in-sample
-forecast errors.}
+prediction errors.}
 
 \item{betas.selection}{If \code{betas.selection == "last"}, the
 estimated coefficients from the last rolling sample will be used to

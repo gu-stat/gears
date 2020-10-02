@@ -15,13 +15,9 @@
 #'
 #' @export plot.gears
 #' @export
-plot.gears <- function(x,
-                       #include, PI=TRUE, showgap = TRUE, shaded=TRUE, shadebars=(length(x$mean) < 5),
-                       #shadecols=NULL,
-                       col = 1, fcol = 4,
-                       #pi.col=1, pi.lty=2,
-                       ylim = NULL, main = NULL, xlab = "",
-                       ylab = "", type = "l", flty = 1, flwd = 2, ...){
+plot.gears <- function(x, col = 1, fcol = 4, ylim = NULL, main = NULL,
+                       xlab = "", ylab = "", type = "l", flty = 1, flwd = 2,
+                       ...){
 
   # |__ Original Data ==========================================================
 
@@ -32,14 +28,29 @@ plot.gears <- function(x,
 
   tmpStart <- stats::start(tmpBindTS)
   tmpFreq  <- stats::frequency(tmpBindTS)
-  tmpEnd   <- stats::tsp(tmpBindTS)[2] + (tmpNForecasts / tmpFreq)
 
-  dataTS <- stats::ts(
-    data      = c(x$x, x$out_sample_forecasts, rep(NA, tmpNForecasts)),
-    start     = tmpStart,
-    end       = tmpEnd,
-    frequency = tmpFreq
-  )
+  if (tmpNForecasts > 1){
+    tmpEnd   <- stats::tsp(tmpBindTS)[2] + (round(tmpNForecasts / 2) / tmpFreq)
+
+    dataTS <- stats::ts(
+      data      = c(
+        x$x, x$out_sample_forecasts, rep(NA, round(tmpNForecasts / 2))
+      ),
+      start     = tmpStart,
+      end       = tmpEnd,
+      frequency = tmpFreq
+    )
+
+  } else {
+    tmpEnd   <- stats::tsp(tmpBindTS)[2] + (tmpNForecasts / tmpFreq)
+
+    dataTS <- stats::ts(
+      data      = c(x$x, x$out_sample_forecasts, rep(NA, tmpNForecasts)),
+      start     = tmpStart,
+      end       = tmpEnd,
+      frequency = tmpFreq
+    )
+  }
 
   # |__ Data - Gaps ============================================================
 
@@ -55,7 +66,7 @@ plot.gears <- function(x,
 
   # |__ Dates - Intervals ======================================================
 
-  tmpDatesPolygon <- time(x$out_sample_forecasts)
+  tmpDatesPolygon <- stats::time(x$out_sample_forecasts)
 
   # |__ Y-Axis Limits ==========================================================
 
@@ -79,14 +90,35 @@ plot.gears <- function(x,
 
   # |__ Plot ===================================================================
 
-  graphics::plot(dataTS, ylim = ylim, main = main, col = col, type = type)
-  graphics::polygon(
-    x      = c(tmpDatesPolygon, rev(tmpDatesPolygon)),
-    y      = c(x$lower, rev(x$upper)),
-    col    = 'grey80',
-    border = NA
+  graphics::plot(
+    x    = dataTS,
+    ylim = ylim,
+    main = main,
+    col  = col,
+    type = type,
+    xlab = xlab,
+    ylab = ylab
   )
   graphics::lines(dataGAP, col="white")
-  graphics::lines(x$out_sample_forecasts, col = fcol, lty = flty, lwd = flwd)
+
+  if (tmpNForecasts > 1){
+    graphics::polygon(
+      x      = c(tmpDatesPolygon, rev(tmpDatesPolygon)),
+      y      = c(x$lower, rev(x$upper)),
+      col    = 'grey80',
+      border = NA
+    )
+    graphics::lines(x$out_sample_forecasts, col = fcol, lty = flty, lwd = flwd)
+  } else {
+    tmpLowerDate <- c(tmpDatesPolygon) - (0.5 / tmpFreq)
+    tmpUpperDate <- c(tmpDatesPolygon) + (0.5 / tmpFreq)
+    graphics::polygon(
+      x      = c(tmpLowerDate, tmpUpperDate, tmpUpperDate, tmpLowerDate),
+      y      = c(rep(x$lower, 2), rep(rev(x$upper), 2)),
+      col    = 'grey80',
+      border = NA
+    )
+    graphics::points(x$out_sample_forecasts, col = fcol, lty = flty, lwd = flwd)
+  }
 
 }

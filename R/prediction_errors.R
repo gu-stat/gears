@@ -83,7 +83,8 @@ prediction_errors <- function(DATA,
                 outsample        = tmp_out,
                 insample         = tmp_in,
                 ts.frequency     = tmp_ts_freq,
-                forecast.horizon = H
+                forecast.horizon = H,
+                error.measure    = names.measures
               )
             }
           )
@@ -96,9 +97,18 @@ prediction_errors <- function(DATA,
         #function(E = X){
         function(X){
           E <- X
-          sapply(X = 1:total.equations, function(X) mean(unlist(tmp[[X]][E, ])))
+          sapply(X = 1:total.equations, function(X) mean(unlist(tmp[[X]])))
         }
       )
+
+      # tmp_errors_by_eq <- sapply(
+      #   X = names.measures,
+      #   #function(E = X){
+      #   function(X){
+      #     E <- X
+      #     sapply(X = 1:total.equations, function(X) mean(unlist(tmp[[X]][E, ])))
+      #   }
+      # )
 
       ## RETURN ----
       tmp_errors_by_eq

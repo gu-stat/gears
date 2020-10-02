@@ -15,7 +15,8 @@ error_measures(
   insample = NULL,
   ts.frequency,
   forecast.horizon,
-  alpha.level = 0.05
+  alpha.level = 0.05,
+  error.measure = NULL
 )
 
 measure_MSE(forecasts, outsample)
@@ -48,6 +49,9 @@ measure_OWA(
 
 \item{alpha.level}{A numeric value with the alpha level to be used in the
 test to detect seasonality. Default is 0.05.}
+
+\item{error.measure}{Error measure to be used when calculating the in-sample
+prediction errors.}
 }
 \value{
 A 5-object list with the numeric values of the forecast error for
@@ -124,6 +128,7 @@ error_measures(
   insample           = tmp.train.data,
   ts.frequency       = tmp.orig.freq,
   forecast.horizon   = tmp.forecast.horizon,
-  alpha.level        = 0.05
+  alpha.level        = 0.05,
+  error.measure      = "mse"
 )
 }

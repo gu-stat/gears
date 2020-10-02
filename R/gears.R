@@ -45,7 +45,7 @@
 #'     \code{use.intercept == "with"}, then only the right-hand side equations
 #'     with intercept are returned.
 #' @param error.measure Error measure to be used when calculating the in-sample
-#'     forecast errors.
+#'     prediction errors.
 #' @param betas.selection If \code{betas.selection == "last"}, the
 #'     estimated coefficients from the last rolling sample will be used to
 #'     obtain the out-of-sample forecasts. If
@@ -325,13 +325,14 @@ gears <- function(DATA,
   ## model number (row) and error measure (column)
 
   predictionErrorsAll <- prediction_errors(
-    DATA,
-    forecast.horizon,
-    Y.name          = yName,
-    total.equations = totalEquations,
-    number.rs,
-    DF.Fit.Predict  = dfFitPredict,
-    forecasts.gears = predictionGEARS
+    DATA             = DATA,
+    forecast.horizon = forecast.horizon,
+    Y.name           = yName,
+    total.equations  = totalEquations,
+    number.rs        = number.rs,
+    DF.Fit.Predict   = dfFitPredict,
+    forecasts.gears  = predictionGEARS,
+    names.measures   = error.measure
   )
 
   ## \____ User's measure-------------------------------------------------------
@@ -459,9 +460,14 @@ gears <- function(DATA,
     }
   )
 
+  # meanPredictionErrorsUser <- cbind(
+  #   seq(1:forecast.horizon),
+  #   meanPredictionErrors[error.measure, ]
+  # )
+
   meanPredictionErrorsUser <- cbind(
     seq(1:forecast.horizon),
-    meanPredictionErrors[error.measure, ]
+    as.numeric(meanPredictionErrors)
   )
 
   colnames(meanPredictionErrorsUser) <- c("forecast.lead", error.measure)
@@ -482,11 +488,13 @@ gears <- function(DATA,
   )
 
   tmp_lower_fct <- function(X, forecasts.gears) {
-    forecasts.gears[X] - tCrit * meanPredictionErrors["mse", X]
+    #forecasts.gears[X] - tCrit * meanPredictionErrors["mse", X]
+    forecasts.gears[X] - tCrit * as.numeric(meanPredictionErrors[X])
   }
 
   tmp_upper_fct <- function(X, forecasts.gears) {
-    forecasts.gears[X] + tCrit * meanPredictionErrors["mse", X]
+    #forecasts.gears[X] + tCrit * meanPredictionErrors["mse", X]
+    forecasts.gears[X] + tCrit * as.numeric(meanPredictionErrors[X])
   }
 
   if (betas.selection != "both"){
@@ -521,6 +529,8 @@ gears <- function(DATA,
       frequency = tmpFreq
     )
 
+    tmpXAll <- DATA
+
   } else {
     tmpFreq     <- 1
     tmpStartOut <- last.obs + (1 / tmpFreq)
@@ -530,6 +540,13 @@ gears <- function(DATA,
     tmpX <- stats::ts(
       data      = DATA[, y.name],
       start     = tmpStartX,
+      end       = tmpEndX,
+      frequency = tmpFreq
+    )
+
+    tmpXAll <- stats::ts(
+      data      = DATA[, y.name],
+      start     = 1,
       end       = tmpEndX,
       frequency = tmpFreq
     )
@@ -594,7 +611,8 @@ gears <- function(DATA,
     out_sample_forecasts      = outSampleForecastsTS,
     lower                     = lowerTS,
     upper                     = upperTS,
-    x                         = tmpX,
+    x                         = tmpXAll,
+    x.fitted                  = tmpX,
     total_equations           = totalEquations,
     total_equations_estimated = totalEquationsEstimated,
     level                     = level,
