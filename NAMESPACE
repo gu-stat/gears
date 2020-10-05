@@ -2,8 +2,10 @@
 
 S3method(plot,gears)
 S3method(print,gears)
+S3method(summary,gears)
 export(error_measures)
 export(forecast_naive2)
 export(gears)
 export(plot.gears)
 export(print.gears)
+export(summary.gears)
