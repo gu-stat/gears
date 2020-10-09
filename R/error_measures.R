@@ -7,7 +7,7 @@
 #'     These can be 'mse', 'mad', 'smape', 'mase', and 'owa' (see Details).
 #' @param forecasts A numeric vector with the point forecasts.
 #' @param outsample A numeric vector with the test data set.
-#' @param insample A numeric vector with the train data set.
+#' @param insample A numeric vector with the training data set.
 #' @param ts.frequency The frequency of a ts object.
 #' @param forecast.horizon A numeric value with the length of the forecast lead.
 #' @param alpha.level A numeric value with the alpha level to be used in the

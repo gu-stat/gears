@@ -15,21 +15,21 @@
 #' @examples
 #' forecast_naive2(
 #' ts.data          = datasets::WWWusage,
-#' ts.frequency          = stats::frequency(datasets::WWWusage),
+#' ts.frequency     = stats::frequency(datasets::WWWusage),
 #' forecast.horizon = 10,
 #' alpha.level      = 0.05
 #' )
 #'
 #' forecast_naive2(
 #'   ts.data          = datasets::AirPassengers,
-#'   ts.frequency          = stats::frequency(datasets::AirPassengers),
+#'   ts.frequency     = stats::frequency(datasets::AirPassengers),
 #'   forecast.horizon = 15,
 #'   alpha.level      = 0.05
 #' )
 #'
 #' forecast_naive2(
 #'   ts.data          = datasets::EuStockMarkets[, "DAX"],
-#'   ts.frequency          = stats::frequency(datasets::EuStockMarkets[, "DAX"]),
+#'   ts.frequency     = stats::frequency(datasets::EuStockMarkets[, "DAX"]),
 #'   forecast.horizon = 40,
 #'   alpha.level      = 0.05
 #' )

@@ -41,7 +41,7 @@ measure_OWA(
 
 \item{outsample}{A numeric vector with the test data set.}
 
-\item{insample}{A numeric vector with the train data set.}
+\item{insample}{A numeric vector with the training data set.}
 
 \item{ts.frequency}{The frequency of a ts object.}
 
