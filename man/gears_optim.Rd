@@ -103,24 +103,13 @@ another with \code{betas.selection == "average"}).}
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
 \value{
-An object of class "\code{gears}".
-    An object of class "\code{gears}" is a list containing the following
-    elements:
-    \describe{
-     \item{fitted_best}{A list containing information about
-         the best fitted model for each error measure (outer level of the
-         list), forecast horizon (inner level 1), and each rolling sample
-         (inner level 2).}
-     \item{out_sample_point_forecasts}{A data frame containing point
-         forecasts for each error measure and beta-selection method.}
-     \item{insample_point_estimates}{List containing the out-of-sample point
-         estimates for each rolling sample (row) and each forecast horizon
-         (column).}
-     \item{insample_mean_error_measure}{A data frame containing the mean
-         prediction errors for each error measure and forecast horizon.}
-     \item{best_equations}{A data frame containing information about the best
-         equation fitted for each error measure and forecast horizon.}
-    }
+A data frame with four columns: "size.rs", "number.rs", "intercept",
+   and the last one named after the selected error measure. The last column
+   returns the minimum value for the selected error measure, and the columns
+   "size.rs" and "number.rs" return the sample sizes and the number of
+   rolling samples used to get this minimum. The column "intercept" gives
+   information on whether the intercept was used ("with"), or not
+   ("without").
 }
 \description{
 This algorithm will search for the "best" size of the rolling sample and the
@@ -136,56 +125,34 @@ If \code{y.max.lags} equals to a number, then all lags of
     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
     to enter the right-hand side of the equation.
 }
+\examples{
+# Univariate Time Series Forecasting - Data of class 'ts'.
+gears_optim(
+  DATA                = datasets::WWWusage,
+  forecast.horizon    = 12,
+  search.size.rs      = c(20, 30),
+  search.number.rs    = c(10, 12),
+  level               = 95,
+  details             = FALSE,
+  glm.family          = "quasi",
+  y.name              = NULL,
+  y.max.lags          = 2,
+  x.names             = NULL,
+  x.max.lags          = NULL,
+  x.fixed.names       = NULL,
+  x.fixed.lags        = NULL,
+  x.interaction.names = NULL,
+  x.interaction.lags  = NULL,
+  last.obs            = length(datasets::WWWusage),
+  use.intercept       = "both",
+  error.measure       = "mse",
+  betas.selection     = "last"
+)
+
+}
 \author{
 Gustavo Varela-Alvarenga
 }
-\keyword{"both",}
-\keyword{"last"}
-\keyword{"mse",}
-\keyword{"quasi",}
-\keyword{#}
-\keyword{#'}
-\keyword{'ts'.}
-\keyword{)}
-\keyword{-}
-\keyword{12,}
-\keyword{2,}
-\keyword{95,}
-\keyword{=}
-\keyword{@examples}
-\keyword{DATA}
-\keyword{Data}
-\keyword{FALSE,}
-\keyword{Forecasting}
-\keyword{NULL,}
-\keyword{Series}
-\keyword{Time}
-\keyword{Univariate}
-\keyword{betas.selection}
-\keyword{c(10:12),}
-\keyword{c(18:20),}
-\keyword{class}
-\keyword{datasets::WWWusage,}
-\keyword{details}
-\keyword{error.measure}
-\keyword{forecast.horizon}
-\keyword{gears(}
 \keyword{glm}
-\keyword{glm.family}
-\keyword{last.obs}
-\keyword{length(datasets::WWWusage),}
-\keyword{level}
-\keyword{of}
 \keyword{optimization}
-\keyword{search.number.rs}
-\keyword{search.size.rs}
 \keyword{ts}
-\keyword{use.intercept}
-\keyword{x.fixed.lags}
-\keyword{x.fixed.names}
-\keyword{x.interaction.lags}
-\keyword{x.interaction.names}
-\keyword{x.max.lags}
-\keyword{x.names}
-\keyword{y.max.lags}
-\keyword{y.name}

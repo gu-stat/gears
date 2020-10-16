@@ -67,35 +67,25 @@
 #'     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
 #'     to enter the right-hand side of the equation.
 #'
-#' @return An object of class "\code{gears}".
-#'     An object of class "\code{gears}" is a list containing the following
-#'     elements:
-#'     \describe{
-#'      \item{fitted_best}{A list containing information about
-#'          the best fitted model for each error measure (outer level of the
-#'          list), forecast horizon (inner level 1), and each rolling sample
-#'          (inner level 2).}
-#'      \item{out_sample_point_forecasts}{A data frame containing point
-#'          forecasts for each error measure and beta-selection method.}
-#'      \item{insample_point_estimates}{List containing the out-of-sample point
-#'          estimates for each rolling sample (row) and each forecast horizon
-#'          (column).}
-#'      \item{insample_mean_error_measure}{A data frame containing the mean
-#'          prediction errors for each error measure and forecast horizon.}
-#'      \item{best_equations}{A data frame containing information about the best
-#'          equation fitted for each error measure and forecast horizon.}
-#'     }
+#' @return A data frame with four columns: "size.rs", "number.rs", "intercept",
+#'    and the last one named after the selected error measure. The last column
+#'    returns the minimum value for the selected error measure, and the columns
+#'    "size.rs" and "number.rs" return the sample sizes and the number of
+#'    rolling samples used to get this minimum. The column "intercept" gives
+#'    information on whether the intercept was used ("with"), or not
+#'    ("without").
+#'
 #' @author Gustavo Varela-Alvarenga
 #'
 #' @keywords ts glm optimization
 #'
-#'#' @examples
+#' @examples
 #' # Univariate Time Series Forecasting - Data of class 'ts'.
-#' gears(
+#' gears_optim(
 #'   DATA                = datasets::WWWusage,
 #'   forecast.horizon    = 12,
-#'   search.size.rs      = c(18:20),
-#'   search.number.rs    = c(10:12),
+#'   search.size.rs      = c(20, 30),
+#'   search.number.rs    = c(10, 12),
 #'   level               = 95,
 #'   details             = FALSE,
 #'   glm.family          = "quasi",
@@ -112,6 +102,8 @@
 #'   error.measure       = "mse",
 #'   betas.selection     = "last"
 #' )
+#'
+#' @export
 gears_optim <- function(DATA,
                   forecast.horizon,
                   search.size.rs,
@@ -223,41 +215,102 @@ gears_optim <- function(DATA,
     X = seq(1:nCombinations),
     function(X) {
 
-      tmpGears <- gears(
-        DATA      = trainingData,
-        size.rs   = allCombinations[X, "size.rs"],
-        number.rs = allCombinations[X, "number.rs"],
-        last.obs  = tmpTrainEnd,
-        forecast.horizon,
-        glm.family,
-        level,
-        details,
-        y.name,
-        y.max.lags,
-        x.names,
-        x.max.lags,
-        x.fixed.names,
-        x.fixed.lags,
-        x.interaction.names,
-        x.interaction.lags,
-        use.intercept,
-        error.measure,
-        betas.selection
-      )
+      tmpSize   <- allCombinations[X, "size.rs"]
+      tmpNumber <- allCombinations[X, "number.rs"]
 
-      # Forecast Error
-      error_measures(
-        forecasts         = tmpGears$out_sample_forecasts,
-        outsample         = testData,
-        insample          = trainingData,
-        ts.frequency      = tmpFreq,
-        forecast.horizon  = forecast.horizon,
-        alpha.level       = 1 - (level / 100),
-        error.measure     = error.measure
-      )
+      if (use.intercept == "both") {
 
-      # TODO: add betas.selection to see which is best, also intercept
+        tmpList <- list("with", "without")
 
+        tmpForecastErrorBoth <- lapply(
+          X = seq_along(tmpList),
+          function(X) {
+            tmpGearsBoth <- gears(
+              DATA      = trainingData,
+              size.rs   = tmpSize,
+              number.rs = tmpNumber,
+              last.obs  = tmpTrainEnd,
+              forecast.horizon,
+              glm.family,
+              level,
+              details,
+              y.name,
+              y.max.lags,
+              x.names,
+              x.max.lags,
+              x.fixed.names,
+              x.fixed.lags,
+              x.interaction.names,
+              x.interaction.lags,
+              use.intercept = tmpList[[X]],
+              error.measure,
+              betas.selection
+            )
+
+            # Forecast Error
+            error_measures(
+              forecasts         = tmpGearsBoth$out_sample_forecasts,
+              outsample         = testData,
+              insample          = trainingData,
+              ts.frequency      = tmpFreq,
+              forecast.horizon  = forecast.horizon,
+              alpha.level       = 1 - (level / 100),
+              error.measure     = error.measure
+            )
+          }
+        )
+
+        tmpMinError      <- which.min(do.call(rbind, tmpForecastErrorBoth))
+        tmpIntercept     <- tmpList[[tmpMinError]]
+        tmpForecastError <- tmpForecastErrorBoth[[tmpMinError]]
+
+      } else {
+        tmpGears <- gears(
+          DATA      = trainingData,
+          size.rs   = allCombinations[X, "size.rs"],
+          number.rs = allCombinations[X, "number.rs"],
+          last.obs  = tmpTrainEnd,
+          forecast.horizon,
+          glm.family,
+          level,
+          details,
+          y.name,
+          y.max.lags,
+          x.names,
+          x.max.lags,
+          x.fixed.names,
+          x.fixed.lags,
+          x.interaction.names,
+          x.interaction.lags,
+          use.intercept,
+          error.measure,
+          betas.selection
+        )
+
+        # Forecast Error
+        tmpForecastError <- error_measures(
+          forecasts         = tmpGears$out_sample_forecasts,
+          outsample         = testData,
+          insample          = trainingData,
+          ts.frequency      = tmpFreq,
+          forecast.horizon  = forecast.horizon,
+          alpha.level       = 1 - (level / 100),
+          error.measure     = error.measure
+        )
+
+        tmpIntercept <- use.intercept
+      }
+
+      # Return
+
+      tmpReturn <- do.call(cbind, list(tmpIntercept, tmpForecastError))
+
+      colnames(tmpReturn) <- c("intercept", error.measure)
+      rownames(tmpReturn) <- NULL
+
+      tmpReturn
+
+      # TODO: add betas.selection to see which is best
     }
   )
 
@@ -265,16 +318,16 @@ gears_optim <- function(DATA,
 
   tmpMinimumError <- min(unlist(forecastErrorsL))
 
-  tmpMinimumObs   <- which(do.call(rbind, forecastErrorsL) == tmpMinimumError)
+  tmpMinimumObs   <- which(
+    do.call(rbind, forecastErrorsL)[, 2] == tmpMinimumError
+  )
 
   # > Add it to the Selected allCombinations ############################## ----
 
   allCombinationsForecasts <- cbind(
     allCombinations[tmpMinimumObs, ],
-    rep(tmpMinimumError, length(tmpMinimumObs))
+    do.call(rbind, lapply(X = tmpMinimumObs, function(X) forecastErrorsL[[X]]))
   )
-
-  names(allCombinationsForecasts)[3] <- error.measure
 
   # > Return ############################################################## ----
 
