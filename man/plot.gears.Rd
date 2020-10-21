@@ -10,11 +10,13 @@
   fcol = 4,
   ylim = NULL,
   main = NULL,
+  sub = NULL,
   xlab = "",
   ylab = "",
   type = "l",
   flty = 1,
   flwd = 2,
+  cex = 1.75,
   ...
 )
 }
@@ -29,6 +31,8 @@
 
 \item{main}{Main title for the plot.}
 
+\item{sub}{Sub-title for the plot.}
+
 \item{xlab}{Label for the X-axis.}
 
 \item{ylab}{Label for the Y-axis.}
@@ -39,6 +43,8 @@
 \item{flty}{Line type for the line with forecasts.}
 
 \item{flwd}{Width of the line with forecasts.}
+
+\item{cex}{Size of the main title when \code{betas.selection = "both"}.}
 
 \item{...}{Other arguments passed to or from other methods.}
 }
