@@ -7,11 +7,28 @@
 #' @export
 print.gears <- function(x, ...){
 
-  tmpBind <- cbind(x$out_sample_forecasts, x$lower, x$upper)
+  if (x$betas == "both"){
+    tmpBind <- lapply(
+      X = 1:2,
+      function(X) {
+         tmp <- cbind(x$out_sample_forecasts[[X]], x$lower[[X]], x$upper[[X]])
+         colnames(tmp) <- c(
+           "Point Forecasts", paste0("Lo ", x$level), paste0("Hi ", x$level)
+         )
+         tmp
+      }
+    )
 
-  colnames(tmpBind) <- c(
-    "Point Forecasts", paste0("Lo ", x$level), paste0("Hi ", x$level)
-  )
+    names(tmpBind) <- c("beta.selection = LAST", "beta.selection = AVERAGE")
+
+  } else {
+
+    tmpBind <- cbind(x$out_sample_forecasts, x$lower, x$upper)
+
+    colnames(tmpBind) <- c(
+      "Point Forecasts", paste0("Lo ", x$level), paste0("Hi ", x$level)
+    )
+  }
 
   print(tmpBind)
 }
