@@ -408,15 +408,17 @@ gears <- function(DATA,
 
   ## \____ Get the Forecasts based on the user's Betas selection ---------------
 
+  tmpOutSampleForecasts <- list(
+    "betas.last"    = outSampleForecastsAll[number.rs, ],
+    "betas.average" = colMeans(outSampleForecastsAll)
+  )
+
   if (betas.selection == "last") {
-    outSampleForecasts <- outSampleForecastsAll[number.rs, ]
+    outSampleForecasts <- tmpOutSampleForecasts$betas.last
   } else if (betas.selection == "average") {
-    outSampleForecasts <- colMeans(outSampleForecastsAll)
+    outSampleForecasts <- tmpOutSampleForecasts$betas.average
   } else {
-    outSampleForecasts <- rbind(
-      outSampleForecastsAll[number.rs, ],
-      colMeans(outSampleForecastsAll)
-    )
+    outSampleForecasts <- tmpOutSampleForecasts
   }
 
   # > Results GEARS ####################################################### ----
@@ -487,32 +489,43 @@ gears <- function(DATA,
     lower.tail = FALSE
   )
 
-  tmp_lower_fct <- function(X, forecasts.gears) {
+  fct_lower <- function(X, forecasts.gears) {
     #forecasts.gears[X] - tCrit * meanPredictionErrors["mse", X]
-    forecasts.gears[X] - tCrit * as.numeric(meanPredictionErrors[X])
+    forecasts.gears[X] - tCrit * sqrt(as.numeric(meanPredictionErrors[X]))
   }
 
-  tmp_upper_fct <- function(X, forecasts.gears) {
+  fct_upper <- function(X, forecasts.gears) {
     #forecasts.gears[X] + tCrit * meanPredictionErrors["mse", X]
-    forecasts.gears[X] + tCrit * as.numeric(meanPredictionErrors[X])
+    forecasts.gears[X] + tCrit * sqrt(as.numeric(meanPredictionErrors[X]))
   }
 
-  if (betas.selection != "both"){
-    lower <- sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts)
-    upper <- sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts)
+  if (betas.selection == "both"){
+    lower <- lapply(
+      X = 1:length(outSampleForecasts),
+      function(X) {
+        tmp <- sapply(1:forecast.horizon, fct_lower, outSampleForecasts[[X]])
+        names(tmp) <- NULL
+        tmp
+      }
+    )
+
+    upper <- lapply(
+      X = 1:length(outSampleForecasts),
+      function(X) {
+        tmp <- sapply(1:forecast.horizon, fct_upper, outSampleForecasts[[X]])
+        names(tmp) <- NULL
+        tmp
+      }
+    )
+
   } else {
-    lower <- rbind(
-      sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts[1, ]),
-      sapply(1:forecast.horizon, tmp_lower_fct, outSampleForecasts[2, ])
-    )
+    lower <- sapply(1:forecast.horizon, fct_lower, outSampleForecasts)
+    upper <- sapply(1:forecast.horizon, fct_upper, outSampleForecasts)
 
-    upper <- rbind(
-      sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts[1, ]),
-      sapply(1:forecast.horizon, tmp_upper_fct, outSampleForecasts[2, ])
-    )
+    names(lower) <- names(upper) <- NULL
   }
 
-  names(lower) <- names(upper) <- NULL
+
 
   ## |_ Transform Results to ts objects  =======================================
 
@@ -552,14 +565,47 @@ gears <- function(DATA,
     )
   }
 
-  outSampleForecastsTS <- stats::ts(
-    data      = outSampleForecasts,
-    start     = tmpStartOut,
-    frequency = tmpFreq
-  )
+  if (betas.selection == "both"){
+    outSampleForecastsTS <- lapply(
+      X = 1:length(outSampleForecasts),
+      function(X) {
+        stats::ts(
+          data      = outSampleForecasts[[X]],
+          start     = tmpStartOut,
+          frequency = tmpFreq
+        )
+      }
+    )
 
-  lowerTS <- stats::ts(lower, start = tmpStartOut, frequency = tmpFreq)
-  upperTS <- stats::ts(upper, start = tmpStartOut, frequency = tmpFreq)
+    lowerTS <- lapply(
+      X = 1:length(lower),
+      function(X) {
+        stats::ts(data = lower[[X]], start = tmpStartOut, frequency = tmpFreq)
+      }
+    )
+
+    upperTS <- lapply(
+      X = 1:length(upper),
+      function(X) {
+        stats::ts(data = upper[[X]], start = tmpStartOut, frequency = tmpFreq)
+      }
+    )
+
+    names(outSampleForecastsTS) <- c("betas.last", "betas.average")
+    names(lowerTS) <- names(upperTS) <- c("betas.last", "betas.average")
+
+  } else {
+
+    outSampleForecastsTS <- stats::ts(
+      data      = outSampleForecasts,
+      start     = tmpStartOut,
+      frequency = tmpFreq
+    )
+
+    lowerTS <- stats::ts(data = lower, start = tmpStartOut, frequency = tmpFreq)
+    upperTS <- stats::ts(data = upper, start = tmpStartOut, frequency = tmpFreq)
+
+  }
 
   inSamplePredictionsTS <- lapply(
     X = 1:forecast.horizon,
