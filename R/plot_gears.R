@@ -170,18 +170,20 @@ plot.gears <- function(x, col = 1, fcol = 4, ylim = NULL, main = NULL,
 
     ## Save current par settings and return after finished
 
-    op <- par(no.readonly = TRUE)
-    on.exit(par(op))
+    op <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(op))
 
     # \____ Set new layout -----------------------------------------------------
 
-    layout(matrix(1:length(x$out_sample_forecasts), ncol = 1, byrow = TRUE))
+    graphics::layout(
+      matrix(1:length(x$out_sample_forecasts), ncol = 1, byrow = TRUE)
+    )
 
     # \____ Set new par --------------------------------------------------------
 
     ## Margins
 
-    par(mar = c(3, 3, 2, 3), oma = c(3, 3, 3, 3))
+    graphics::par(mar = c(3, 3, 2, 3), oma = c(3, 3, 3, 3))
 
     # \____ Title --------------------------------------------------------------
 
@@ -221,7 +223,9 @@ plot.gears <- function(x, col = 1, fcol = 4, ylim = NULL, main = NULL,
           ...
         )
 
-        if (X == 1) mtext(tmpMain, outer = T, line = 1, side = 3, cex = cex)
+        if (X == 1) {
+          graphics::mtext(tmpMain, outer = T, line = 1, side = 3, cex = cex)
+        }
 
       }
     )
