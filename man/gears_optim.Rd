@@ -24,6 +24,8 @@ gears_optim(
   use.intercept = c("both", "without", "with"),
   error.measure = c("mse", "mae", "mase", "smape", "owa"),
   betas.selection = c("last", "average", "both"),
+  use.parallel = FALSE,
+  num.cores = NULL,
   ...
 )
 }
@@ -100,6 +102,14 @@ If \code{betas.selection == "both"}, then two out-of-sample forecasts
 will be estimated (one with \code{betas.selection == "last"} and
 another with \code{betas.selection == "average"}).}
 
+\item{use.parallel}{If parallel computing should be used. Default is
+\code{FALSE}.}
+
+\item{num.cores}{Number of cores to use if parallel computing is used.
+If \code{use.parallel == TRUE}, then the default is
+\code{detectCores() - 1}. For more details, see
+\link[parallel]{detectCores}.}
+
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
 \value{
@@ -146,7 +156,83 @@ gears_optim(
   last.obs            = length(datasets::WWWusage),
   use.intercept       = "both",
   error.measure       = "mse",
-  betas.selection     = "last"
+  betas.selection     = "last",
+  use.parallel        = FALSE,
+   num.cores          = NULL
+)
+
+gears_optim(
+  DATA                = datasets::WWWusage,
+  forecast.horizon    = 12,
+  search.size.rs      = c(20, 30),
+  search.number.rs    = c(10, 12),
+  level               = 95,
+  details             = FALSE,
+  glm.family          = "quasi",
+  y.name              = NULL,
+  y.max.lags          = 2,
+  x.names             = NULL,
+  x.max.lags          = NULL,
+  x.fixed.names       = NULL,
+  x.fixed.lags        = NULL,
+  x.interaction.names = NULL,
+  x.interaction.lags  = NULL,
+  last.obs            = length(datasets::WWWusage),
+  use.intercept       = "both",
+  error.measure       = "mse",
+  betas.selection     = "both",
+  use.parallel        = FALSE,
+  num.cores           = NULL
+)
+
+gears_optim(
+  DATA                = datasets::WWWusage,
+  forecast.horizon    = 12,
+  search.size.rs      = c(20, 30),
+  search.number.rs    = c(10, 12),
+  level               = 95,
+  details             = FALSE,
+  glm.family          = "quasi",
+  y.name              = NULL,
+  y.max.lags          = 2,
+  x.names             = NULL,
+  x.max.lags          = NULL,
+  x.fixed.names       = NULL,
+  x.fixed.lags        = NULL,
+  x.interaction.names = NULL,
+  x.interaction.lags  = NULL,
+  last.obs            = length(datasets::WWWusage),
+  use.intercept       = "with",
+  error.measure       = "mse",
+  betas.selection     = "both",
+  use.parallel        = FALSE,
+  num.cores           = NULL
+)
+
+# With Parallel Computing
+# Univariate Time Series Forecasting - Data of class 'ts'.
+gears_optim(
+  DATA                = datasets::WWWusage,
+  forecast.horizon    = 12,
+  search.size.rs      = c(20, 30),
+  search.number.rs    = c(10, 12),
+  level               = 95,
+  details             = FALSE,
+  glm.family          = "quasi",
+  y.name              = NULL,
+  y.max.lags          = 2,
+  x.names             = NULL,
+  x.max.lags          = NULL,
+  x.fixed.names       = NULL,
+  x.fixed.lags        = NULL,
+  x.interaction.names = NULL,
+  x.interaction.lags  = NULL,
+  last.obs            = length(datasets::WWWusage),
+  use.intercept       = "both",
+  error.measure       = "mse",
+  betas.selection     = "last",
+  use.parallel        = TRUE,
+  num.cores          = NULL
 )
 
 }

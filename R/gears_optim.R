@@ -57,6 +57,12 @@
 #'     If \code{betas.selection == "both"}, then two out-of-sample forecasts
 #'     will be estimated (one with \code{betas.selection == "last"} and
 #'     another with \code{betas.selection == "average"}).
+#' @param use.parallel If parallel computing should be used. Default is
+#'     \code{FALSE}.
+#' @param num.cores Number of cores to use if parallel computing is used.
+#'     If \code{use.parallel == TRUE}, then the default is
+#'     \code{detectCores() - 1}. For more details, see
+#'     \link[parallel]{detectCores}.
 #' @param ... Further arguments passed to \link[stats]{glm}.
 #'
 #' @details If \code{y.max.lags} equals to a number, then all lags of
@@ -100,7 +106,83 @@
 #'   last.obs            = length(datasets::WWWusage),
 #'   use.intercept       = "both",
 #'   error.measure       = "mse",
-#'   betas.selection     = "last"
+#'   betas.selection     = "last",
+#'   use.parallel        = FALSE,
+#'    num.cores          = NULL
+#' )
+#'
+#' gears_optim(
+#'   DATA                = datasets::WWWusage,
+#'   forecast.horizon    = 12,
+#'   search.size.rs      = c(20, 30),
+#'   search.number.rs    = c(10, 12),
+#'   level               = 95,
+#'   details             = FALSE,
+#'   glm.family          = "quasi",
+#'   y.name              = NULL,
+#'   y.max.lags          = 2,
+#'   x.names             = NULL,
+#'   x.max.lags          = NULL,
+#'   x.fixed.names       = NULL,
+#'   x.fixed.lags        = NULL,
+#'   x.interaction.names = NULL,
+#'   x.interaction.lags  = NULL,
+#'   last.obs            = length(datasets::WWWusage),
+#'   use.intercept       = "both",
+#'   error.measure       = "mse",
+#'   betas.selection     = "both",
+#'   use.parallel        = FALSE,
+#'   num.cores           = NULL
+#' )
+#'
+#' gears_optim(
+#'   DATA                = datasets::WWWusage,
+#'   forecast.horizon    = 12,
+#'   search.size.rs      = c(20, 30),
+#'   search.number.rs    = c(10, 12),
+#'   level               = 95,
+#'   details             = FALSE,
+#'   glm.family          = "quasi",
+#'   y.name              = NULL,
+#'   y.max.lags          = 2,
+#'   x.names             = NULL,
+#'   x.max.lags          = NULL,
+#'   x.fixed.names       = NULL,
+#'   x.fixed.lags        = NULL,
+#'   x.interaction.names = NULL,
+#'   x.interaction.lags  = NULL,
+#'   last.obs            = length(datasets::WWWusage),
+#'   use.intercept       = "with",
+#'   error.measure       = "mse",
+#'   betas.selection     = "both",
+#'   use.parallel        = FALSE,
+#'   num.cores           = NULL
+#' )
+#'
+#' # With Parallel Computing
+#' # Univariate Time Series Forecasting - Data of class 'ts'.
+#' gears_optim(
+#'   DATA                = datasets::WWWusage,
+#'   forecast.horizon    = 12,
+#'   search.size.rs      = c(20, 30),
+#'   search.number.rs    = c(10, 12),
+#'   level               = 95,
+#'   details             = FALSE,
+#'   glm.family          = "quasi",
+#'   y.name              = NULL,
+#'   y.max.lags          = 2,
+#'   x.names             = NULL,
+#'   x.max.lags          = NULL,
+#'   x.fixed.names       = NULL,
+#'   x.fixed.lags        = NULL,
+#'   x.interaction.names = NULL,
+#'   x.interaction.lags  = NULL,
+#'   last.obs            = length(datasets::WWWusage),
+#'   use.intercept       = "both",
+#'   error.measure       = "mse",
+#'   betas.selection     = "last",
+#'   use.parallel        = TRUE,
+#'   num.cores          = NULL
 #' )
 #'
 #' @export
@@ -125,6 +207,8 @@ gears_optim <- function(DATA,
                   use.intercept = c("both", "without", "with"),
                   error.measure = c("mse", "mae", "mase", "smape", "owa"),
                   betas.selection = c("last", "average", "both"),
+                  use.parallel = FALSE,
+                  num.cores = NULL,
                   ...) {
 
   # > CHECKS ############################################################## ----
@@ -140,13 +224,11 @@ gears_optim <- function(DATA,
   # > Last Observation #################################################### ----
 
   if (is.null(last.obs)) {
-
     if (stats::is.ts(DATA)) {
       last.obs <- length(DATA)
     } else {
       last.obs <- dim(DATA)[1]
     }
-
   }
 
   # > Training and Test Data Sets ######################################### ----
@@ -211,7 +293,62 @@ gears_optim <- function(DATA,
 
   # > Run GEARS ########################################################### ----
 
-  forecastErrorsL <- lapply(
+  # |_ Check for Parallel ======================================================
+
+  if (isTRUE(use.parallel)){
+
+    # Number of cores
+
+    ## Do this to overcome CRAN's problem with more than 2 cores:
+
+
+    if (is.null(num.cores)) {
+      tmpCheck <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+      if (nzchar(tmpCheck) && tmpCheck == "TRUE") {
+        # use 2 cores in CRAN/Travis/AppVeyor
+        no_cores <- 2L
+      } else {
+        # use all cores in devtools::test()
+        no_cores <- parallel::detectCores() - 1
+      }
+    } else {
+      no_cores <- num.cores
+    }
+
+    # Initiate cluster
+
+    if (Sys.info()[['sysname']] != "Windows") {
+      tmpCluster <- parallel::makeCluster(no_cores, type = "FORK")
+      on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
+    } else {
+
+      tmpCluster <- parallel::makeCluster(no_cores)
+      on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
+
+      parallel::clusterExport(
+        cl      = tmpCluster,
+        envir   = environment(),
+        varlist = list(
+          "nCombinations",
+          "allCombinations",
+          "trainingData",
+          "testData",
+          "tmpTrainEnd",
+          "tmpFreq"
+        )
+      )
+      parallel::clusterEvalQ(tmpCluster, library("gears"))
+
+    }
+
+    # Temporary lapply function
+    tmFcnPar <- function(...) parallel::parLapply(cl = tmpCluster, ...)
+
+  } else {
+    tmFcnPar <- function(...) lapply(...)
+  }
+
+  forecastErrorsL <- tmFcnPar(
     X = seq(1:nCombinations),
     function(X) {
 
@@ -248,24 +385,60 @@ gears_optim <- function(DATA,
             )
 
             # Forecast Error
-            error_measures(
-              forecasts         = tmpGearsBoth$out_sample_forecasts,
-              outsample         = testData,
-              insample          = trainingData,
-              ts.frequency      = tmpFreq,
-              forecast.horizon  = forecast.horizon,
-              alpha.level       = 1 - (level / 100),
-              error.measure     = error.measure
-            )
+
+            if (betas.selection == "both") {
+              tmpErrorBetas <- sapply(
+                X = 1:2,
+                function(X){
+                  error_measures(
+                    forecasts         = tmpGearsBoth$out_sample_forecasts[[X]],
+                    outsample         = testData,
+                    insample          = trainingData,
+                    ts.frequency      = tmpFreq,
+                    forecast.horizon  = forecast.horizon,
+                    alpha.level       = 1 - (level / 100),
+                    error.measure     = error.measure
+                  )
+                }
+              )
+
+              names(tmpErrorBetas) <- c("last", "average")
+
+              tmpErrorBetas
+
+            } else {
+              tmpErrorBetas <- error_measures(
+                forecasts         = tmpGearsBoth$out_sample_forecasts,
+                outsample         = testData,
+                insample          = trainingData,
+                ts.frequency      = tmpFreq,
+                forecast.horizon  = forecast.horizon,
+                alpha.level       = 1 - (level / 100),
+                error.measure     = error.measure
+              )
+
+              names(tmpErrorBetas) <- betas.selection
+
+              tmpErrorBetas
+            }
+
           }
         )
 
-        tmpMinError      <- which.min(do.call(rbind, tmpForecastErrorBoth))
-        tmpIntercept     <- tmpList[[tmpMinError]]
-        tmpForecastError <- tmpForecastErrorBoth[[tmpMinError]]
+        names(tmpForecastErrorBoth) <- c(unlist(tmpList))
+
+        tmpUnlistedErrors <- unlist(tmpForecastErrorBoth)
+
+        tmpMinError       <- min(tmpUnlistedErrors)
+
+        tmpForecastError  <- tmpUnlistedErrors[tmpUnlistedErrors==tmpMinError]
+
+        tmpIntercept <- gsub("^(.*?)\\..*$", "\\1", names(tmpForecastError))
+        tmpFinalBeta <- gsub(".*\\.","",names(tmpForecastError))
 
       } else {
-        tmpGears <- gears(
+
+        tmpGearsSingle <- gears(
           DATA      = trainingData,
           size.rs   = allCombinations[X, "size.rs"],
           number.rs = allCombinations[X, "number.rs"],
@@ -287,30 +460,61 @@ gears_optim <- function(DATA,
           betas.selection
         )
 
-        # Forecast Error
-        tmpForecastError <- error_measures(
-          forecasts         = tmpGears$out_sample_forecasts,
-          outsample         = testData,
-          insample          = trainingData,
-          ts.frequency      = tmpFreq,
-          forecast.horizon  = forecast.horizon,
-          alpha.level       = 1 - (level / 100),
-          error.measure     = error.measure
-        )
+        if (betas.selection == "both") {
+          tmpErrorBetas <- sapply(
+            X = 1:2,
+            function(X){
+              error_measures(
+                forecasts         = tmpGearsSingle$out_sample_forecasts[[X]],
+                outsample         = testData,
+                insample          = trainingData,
+                ts.frequency      = tmpFreq,
+                forecast.horizon  = forecast.horizon,
+                alpha.level       = 1 - (level / 100),
+                error.measure     = error.measure
+              )
+            }
+          )
 
-        tmpIntercept <- use.intercept
+          names(tmpErrorBetas) <- c("last", "average")
+
+        } else {
+          tmpErrorBetas <- error_measures(
+            forecasts         = tmpGearsSingle$out_sample_forecasts,
+            outsample         = testData,
+            insample          = trainingData,
+            ts.frequency      = tmpFreq,
+            forecast.horizon  = forecast.horizon,
+            alpha.level       = 1 - (level / 100),
+            error.measure     = error.measure
+          )
+
+          names(tmpErrorBetas) <- betas.selection
+
+        }
+
+        tmpUnlistedErrors <- unlist(tmpErrorBetas)
+
+        tmpMinError       <- min(tmpUnlistedErrors)
+
+        tmpForecastError  <- tmpUnlistedErrors[tmpUnlistedErrors==tmpMinError]
+
+        tmpFinalBeta <- names(tmpForecastError)
+        tmpIntercept <- rep(use.intercept, length(tmpFinalBeta))
+
       }
 
       # Return
 
-      tmpReturn <- do.call(cbind, list(tmpIntercept, tmpForecastError))
+      tmpReturn <- do.call(
+        cbind, list(tmpIntercept, tmpFinalBeta, tmpForecastError)
+      )
 
-      colnames(tmpReturn) <- c("intercept", error.measure)
+      colnames(tmpReturn) <- c("intercept", "betas", error.measure)
       rownames(tmpReturn) <- NULL
 
       tmpReturn
 
-      # TODO: add betas.selection to see which is best
     }
   )
 
@@ -319,7 +523,7 @@ gears_optim <- function(DATA,
   tmpMinimumError <- min(unlist(forecastErrorsL))
 
   tmpMinimumObs   <- which(
-    do.call(rbind, forecastErrorsL)[, 2] == tmpMinimumError
+    do.call(rbind, forecastErrorsL)[, error.measure] == tmpMinimumError
   )
 
   # > Add it to the Selected allCombinations ############################## ----
