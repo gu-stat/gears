@@ -213,15 +213,40 @@ gears_optim <- function(DATA,
 
   # > CHECKS ############################################################## ----
   #
-  # TODO: INCLUDE CHECKS FROM OLD FILE "new_gears.R"
-  # TODO: FIX PROBLEMS WHEN NOT-SPECIFYING last.obs, use.intercept AND NULL
-  # VARIABLES
-  # TODO: insample_point_estimates RETURNS THE SAME INFO TWICE IF
-  # error.measure.list IS SPECIFIED.
-  #
-  #use.intercept <- match.arg(use.intercept)
+  # TODO: FIX PROBLEMS WHEN NOT-SPECIFYING NULL VARIABLES
+  # TODO: Check problems with checks under Univariate TS Inputs
+  # > CHECK ARGUMENTS ##################################################### ----
 
-  # > Last Observation #################################################### ----
+  # |__ Checks that STOP the function ==========================================
+
+  checks(
+    DATA,
+    forecast.horizon,
+    size.rs = max(search.size.rs),
+    number.rs = max(search.number.rs),
+    level,
+    y.name,
+    y.max.lags,
+    x.names,
+    x.max.lags,
+    x.fixed.names,
+    x.fixed.lags,
+    x.interaction.names,
+    x.interaction.lags,
+    last.obs, use.intercept
+  )
+
+  # |__ GLM Family =============================================================
+
+  if (missing(glm.family)) glm.family <- "quasi"
+
+  if(!missing(glm.family) & length(glm.family)>1) {
+    stop("Only one 'glm.family' allowed.")
+  }
+
+  glm.family <- match.arg(glm.family)
+
+  # |__ Last Observation =======================================================
 
   if (is.null(last.obs)) {
     if (stats::is.ts(DATA)) {
@@ -229,7 +254,118 @@ gears_optim <- function(DATA,
     } else {
       last.obs <- dim(DATA)[1]
     }
+  } else {
+    if (stats::is.ts(DATA)) {
+      checkLastObs <- length(DATA)
+    } else {
+      checkLastObs <- dim(DATA)[1]
+    }
+    if (last.obs > checkLastObs) {
+      stop(paste0(
+        "The value for 'last.obs' is greater than the size/length of your data."
+      ))
+    }
   }
+
+  # |__ Intercept ==============================================================
+
+  if (missing(use.intercept)) use.intercept <- "both"
+
+  if(!missing(use.intercept) & length(use.intercept)>1) {
+    stop("Only one 'use.intercept' allowed.")
+  }
+
+  use.intercept <- match.arg(use.intercept)
+
+  # |__ Error Measure ==========================================================
+
+  if (missing(error.measure)) error.measure <- "mse"
+
+  if(!missing(error.measure) & length(error.measure)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
+
+  error.measure <- match.arg(error.measure)
+
+  # |__ Betas Selection ========================================================
+
+  if (missing(betas.selection)) betas.selection <- "both"
+
+  if(!missing(betas.selection) & length(betas.selection)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
+
+  betas.selection <- match.arg(betas.selection)
+
+  # # |__ Univariate TS Inputs ===================================================
+  #
+  # if (class(DATA)[1] == "ts") {
+  #
+  #   if (is.null(y.max.lags) & !is.null(x.max.lags)) {
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use the highest ",
+  #       "value in 'x.max.lags' as the maximum number of lags of Y."
+  #     ))
+  #
+  #     y.max.lags <- max(unlist(x.max.lags))
+  #     x.max.lags <- NULL
+  #
+  #   } else if (!is.null(y.max.lags) & !is.null(x.max.lags)) {
+  #
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use ",
+  #       "'y.max.lags' as the maximum number of lags of Y and will disregard ",
+  #       "'x.max.lags'."
+  #     ))
+  #
+  #     x.max.lags <- NULL
+  #
+  #     if (is.null(y.name)) {
+  #       if (is.null(x.names)) {
+  #         y.name <- "Y"
+  #       } else {
+  #         if (length(x.names) > 1) {
+  #           warning(paste0(
+  #             "DATA input is an univariate time series. Function will ",
+  #             "use 'y.max.lags' as the maximum number of lags of Y and will ",
+  #             "disregard 'x.max.lags'."
+  #           ))
+  #         }
+  #       }
+  #     }
+  #
+  #     if (length(y.max.lags) > 1) {
+  #       warning(paste0(
+  #         "Variable y.max.lags must have only one value. ",
+  #         "Function will use the highest value in y.max.lags as the ",
+  #         "maximum number of lags of Y."
+  #       ))
+  #       y.max.lags <- max(y.max.lags)
+  #     }
+  #
+  #   } else if (is.null(y.max.lags) & is.null(x.max.lags)) {
+  #
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use ",
+  #       "'x.fixed.lags' as the number of lags of Y."
+  #     ))
+  #
+  #     if (is.null(x.fixed.names)) {
+  #       if (is.null(y.name)) y.name <- "Y"
+  #       x.fixed.names <- lapply(1:length(x.fixed.lags), function(X) y.name)
+  #     }
+  #   }
+  # }
+  #
+  # # |__ X variable name ========================================================
+  #
+  # if (class(DATA)[1] == "data.frame") {
+  #   if (is.null(x.names) & !is.null(y.max.lags)) {
+  #     x.names <- y.name
+  #   }
+  # }
+
+  # > DATA MANIPULATION ################################################### ----
 
   # > Training and Test Data Sets ######################################### ----
 
@@ -267,7 +403,6 @@ gears_optim <- function(DATA,
       end   = tmpTestEnd
     )
 
-
   } else {
 
     tmpFreq <- stats::frequency(DATA)
@@ -300,8 +435,6 @@ gears_optim <- function(DATA,
     # Number of cores
 
     ## Do this to overcome CRAN's problem with more than 2 cores:
-
-
     if (is.null(num.cores)) {
       tmpCheck <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
       if (nzchar(tmpCheck) && tmpCheck == "TRUE") {

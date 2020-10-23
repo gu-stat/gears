@@ -211,19 +211,170 @@ gears <- function(DATA,
                   ...) { # ... TO ACCOUNT FOR OTHER OPTIONS PASSED TO glm
 
 
-  # > CHECKS ############################################################## ----
+  # > TODO ################################################################ ----
   #
-  # TODO: INCLUDE CHECKS FROM OLD FILE "new_gears.R"
-  # TODO: FIX PROBLEMS WHEN NOT-SPECIFYING last.obs, use.intercept AND NULL
-  # VARIABLES
-  # TODO: insample_point_estimates RETURNS THE SAME INFO TWICE IF
-  # error.measure.list IS SPECIFIED.
+  # TODO: FIX PROBLEMS WHEN NOT-SPECIFYING NULL VARIABLES
+  # TODO: Check problems with checks under Univariate TS Inputs
   #
-  #use.intercept <- match.arg(use.intercept)
+  # > CHECK ARGUMENTS ##################################################### ----
 
-  # > Helpers ############################################################# ----
+  # |__ Checks that STOP the function ==========================================
 
-  # > DATA ################################################################ ----
+  checks(
+    DATA,
+    forecast.horizon,
+    size.rs,
+    number.rs,
+    level,
+    y.name,
+    y.max.lags,
+    x.names,
+    x.max.lags,
+    x.fixed.names,
+    x.fixed.lags,
+    x.interaction.names,
+    x.interaction.lags,
+    last.obs, use.intercept
+  )
+
+  # |__ Y variable name ========================================================
+
+  if (is.null(y.name)) {
+    yName  <- "Y_t"
+  } else {
+    yName  <- paste0(y.name, "_t")
+  }
+
+  # |__ GLM Family =============================================================
+
+  if (missing(glm.family)) glm.family <- "quasi"
+
+  if(!missing(glm.family) & length(glm.family)>1) {
+    stop("Only one 'glm.family' allowed.")
+  }
+
+  glm.family <- match.arg(glm.family)
+
+  # |__ Last Observation =======================================================
+
+  if (is.null(last.obs)) {
+    if (stats::is.ts(DATA)) {
+      last.obs <- length(DATA)
+    } else {
+      last.obs <- dim(DATA)[1]
+    }
+  } else {
+    if (stats::is.ts(DATA)) {
+      checkLastObs <- length(DATA)
+    } else {
+      checkLastObs <- dim(DATA)[1]
+    }
+    if (last.obs > checkLastObs) {
+      stop(paste0(
+        "The value for 'last.obs' is greater than the size/length of your data."
+      ))
+    }
+  }
+
+  # |__ Intercept ==============================================================
+
+  if (missing(use.intercept)) use.intercept <- "both"
+
+  if(!missing(use.intercept) & length(use.intercept)>1) {
+    stop("Only one 'use.intercept' allowed.")
+  }
+
+  use.intercept <- match.arg(use.intercept)
+
+  # |__ Error Measure ==========================================================
+
+  if (missing(error.measure)) error.measure <- "mse"
+
+  if(!missing(error.measure) & length(error.measure)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
+
+  error.measure <- match.arg(error.measure)
+
+  # |__ Betas Selection ========================================================
+
+  if (missing(betas.selection)) betas.selection <- "both"
+
+  if(!missing(betas.selection) & length(betas.selection)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
+
+  betas.selection <- match.arg(betas.selection)
+
+  # # |__ Univariate TS Inputs ===================================================
+  #
+  # if (class(DATA)[1] == "ts") {
+  #
+  #   if (is.null(y.max.lags) & !is.null(x.max.lags)) {
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use the highest ",
+  #       "value in 'x.max.lags' as the maximum number of lags of Y."
+  #     ))
+  #
+  #     y.max.lags <- max(unlist(x.max.lags))
+  #     x.max.lags <- NULL
+  #
+  #   } else if (!is.null(y.max.lags) & !is.null(x.max.lags)) {
+  #
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use ",
+  #       "'y.max.lags' as the maximum number of lags of Y and will disregard ",
+  #       "'x.max.lags'."
+  #     ))
+  #
+  #     x.max.lags <- NULL
+  #
+  #     if (is.null(y.name)) {
+  #       if (is.null(x.names)) {
+  #         y.name <- "Y"
+  #       } else {
+  #         if (length(x.names) > 1) {
+  #           warning(paste0(
+  #             "DATA input is an univariate time series. Function will ",
+  #             "use 'y.max.lags' as the maximum number of lags of Y and will ",
+  #             "disregard 'x.max.lags'."
+  #           ))
+  #         }
+  #       }
+  #     }
+  #
+  #     if (length(y.max.lags) > 1) {
+  #       warning(paste0(
+  #         "Variable y.max.lags must have only one value. ",
+  #         "Function will use the highest value in y.max.lags as the ",
+  #         "maximum number of lags of Y."
+  #       ))
+  #       y.max.lags <- max(y.max.lags)
+  #     }
+  #
+  #   } else if (is.null(y.max.lags) & is.null(x.max.lags)) {
+  #
+  #     warning(paste0(
+  #       "DATA input is an univariate time series. Function will use ",
+  #       "'x.fixed.lags' as the number of lags of Y."
+  #     ))
+  #
+  #     if (is.null(x.fixed.names)) {
+  #       if (is.null(y.name)) y.name <- "Y"
+  #       x.fixed.names <- lapply(1:length(x.fixed.lags), function(X) y.name)
+  #     }
+  #   }
+  # }
+  #
+  # # |__ X variable name ========================================================
+  #
+  # if (class(DATA)[1] == "data.frame") {
+  #   if (is.null(x.names) & !is.null(y.max.lags)) {
+  #     x.names <- y.name
+  #   }
+  # }
+
+  # > DATA MANIPULATION ################################################### ----
 
   # |__ DF Fit Predict =========================================================
   ## Used as argument for the "fit_predict", "fit_best", and "prediction_erros"
@@ -261,14 +412,6 @@ gears <- function(DATA,
   )
 
   # > ALL POSSIBLE MODELS/EQUATIONS ####################################### ----
-
-  # |__ Y variable name ========================================================
-
-  if (is.null(y.name)) {
-    yName <- "Y_t"
-  } else {
-    yName <- paste0(y.name, "_t")
-  }
 
   # |__ All equations rhs ======================================================
 
@@ -387,12 +530,12 @@ gears <- function(DATA,
 
   # |__ Get Prediction Errors ==================================================
 
-  ## \____ All measures --------------------------------------------------------
+  ## \____ Selected Measure ----------------------------------------------------
   ## Returns a list where the first level is the forecast lead, and inside each
   ## level there is a table that returns the prediction errors by equation/
   ## model number (row) and error measure (column)
 
-  predictionErrorsAll <- prediction_errors(
+  predictionErrorsUser <- prediction_errors(
     DATA             = DATA,
     forecast.horizon = forecast.horizon,
     Y.name           = yName,
@@ -403,13 +546,24 @@ gears <- function(DATA,
     names.measures   = error.measure
   )
 
-  ## \____ User's measure-------------------------------------------------------
-  ## Returns a table with the prediction errors by equation/model number (row)
-  ## and forecast lead (column), only for the selected error measures.
-
   predictionErrors <- sapply(
     X = 1:forecast.horizon,
-    function(X) predictionErrorsAll[[X]][, error.measure]
+    function(X) predictionErrorsUser[[X]][, error.measure]
+  )
+
+  ## \____ MSE -----------------------------------------------------------------
+
+  ## This will be used for the confidence intervals
+
+  predictionMSE <- prediction_errors(
+    DATA             = DATA,
+    forecast.horizon = forecast.horizon,
+    Y.name           = yName,
+    total.equations  = totalEquations,
+    number.rs        = number.rs,
+    DF.Fit.Predict   = dfFitPredict,
+    forecasts.gears  = predictionGEARS,
+    names.measures   = "mse"
   )
 
   # > BEST EQUATION ####################################################### ----
@@ -526,7 +680,7 @@ gears <- function(DATA,
       h <- X        # address the issue: "no visible binding for global
       # variable" generated by "R CMD check"
       eq <- equationsMinError[h]
-      predictionErrorsAll[[h]][eq, ]
+      predictionErrorsUser[[h]][eq, ]
     }
   )
 
@@ -541,6 +695,27 @@ gears <- function(DATA,
   )
 
   colnames(meanPredictionErrorsUser) <- c("forecast.lead", error.measure)
+
+  # |_ MSE Out-of-sample Prediction - Best Model ===============================
+
+  bestMSE <- sapply(
+    X = 1:forecast.horizon,
+    #function(h = X) {
+    function(X) {   # Using this instead of what's on the previous line to
+      h <- X        # address the issue: "no visible binding for global
+      # variable" generated by "R CMD check"
+      eq <- equationsMinError[h]
+      predictionMSE[[h]][eq, ]
+    }
+  )
+
+  bestOutMSE <- cbind(
+    seq(1:forecast.horizon),
+    as.numeric(bestMSE)
+  )
+
+  colnames(bestOutMSE) <- c("forecast.lead", "mse")
+
 
   ## |_ Get Prediction Interval ================================================
 
@@ -558,13 +733,11 @@ gears <- function(DATA,
   )
 
   fct_lower <- function(X, forecasts.gears) {
-    #forecasts.gears[X] - tCrit * meanPredictionErrors["mse", X]
-    forecasts.gears[X] - tCrit * sqrt(as.numeric(meanPredictionErrors[X]))
+    forecasts.gears[X] - tCrit * sqrt(as.numeric(bestMSE[X]))
   }
 
   fct_upper <- function(X, forecasts.gears) {
-    #forecasts.gears[X] + tCrit * meanPredictionErrors["mse", X]
-    forecasts.gears[X] + tCrit * sqrt(as.numeric(meanPredictionErrors[X]))
+    forecasts.gears[X] + tCrit * sqrt(as.numeric(bestMSE[X]))
   }
 
   if (betas.selection == "both"){
@@ -733,6 +906,7 @@ gears <- function(DATA,
     betas                     = betas.selection,
     error_measure             = error.measure,
     min_prediction_errors     = meanPredictionErrorsUser,
+    mse_out_sample_prediction = bestOutMSE,
     details                   = detailsGEARS
   )
 
