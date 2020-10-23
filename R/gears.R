@@ -54,6 +54,12 @@
 #'     If \code{betas.selection == "both"}, then two out-of-sample forecasts
 #'     will be estimated (one with \code{betas.selection == "last"} and
 #'     another with \code{betas.selection == "average"}).
+#' @param use.parallel If parallel computing should be used. Default is
+#'     \code{FALSE}.
+#' @param num.cores Number of cores to use if parallel computing is used.
+#'     If \code{use.parallel == TRUE}, then the default is
+#'     \code{detectCores() - 1}. For more details, see
+#'     \link[parallel]{detectCores}.
 #' @param ... Further arguments passed to \link[stats]{glm}.
 #'
 #' @details If \code{y.max.lags} equals to a number, then all lags of
@@ -200,6 +206,8 @@ gears <- function(DATA,
                   use.intercept = c("both", "without", "with"),
                   error.measure = c("mse", "mae", "mase", "smape", "owa"),
                   betas.selection = c("last", "average", "both"),
+                  use.parallel = FALSE,
+                  num.cores = NULL,
                   ...) { # ... TO ACCOUNT FOR OTHER OPTIONS PASSED TO glm
 
 
@@ -284,6 +292,66 @@ gears <- function(DATA,
 
   totalEquationsEstimated <- totalEquations * number.rs * forecast.horizon
 
+  # > PARALLEL ############################################################ ----
+  # |_ Check for Parallel ======================================================
+
+  if (isTRUE(use.parallel)){
+
+    # Number of cores
+
+    ## Do this to overcome CRAN's problem with more than 2 cores:
+
+    if (is.null(num.cores)) {
+      tmpCheck <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+      if (nzchar(tmpCheck) && tmpCheck == "TRUE") {
+        # use 2 cores in CRAN/Travis/AppVeyor
+        no_cores <- 2L
+      } else {
+        # use all cores in devtools::test()
+        no_cores <- parallel::detectCores() - 1
+      }
+    } else {
+      no_cores <- num.cores
+    }
+
+    # Initiate cluster
+
+    if (Sys.info()[['sysname']] != "Windows") {
+      tmpCluster <- parallel::makeCluster(no_cores, type = "FORK")
+      on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
+    } else {
+
+      tmpCluster <- parallel::makeCluster(no_cores)
+      on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
+
+      parallel::clusterExport(
+        cl      = tmpCluster,
+        envir   = environment(),
+        varlist = list(
+          "dfFitPredict",
+          "dfForecast",
+          "yName",
+          "allEquationsRhs",
+          "totalEquations"
+        )
+      )
+
+      parallel::clusterCall(
+        cl = tmpCluster,
+        assign,
+        "fit_predict",
+        fit_predict,
+        envir = .GlobalEnv
+      )
+    }
+
+    # Temporary lapply function
+    tmFcnPar <- function(...) parallel::parLapply(cl = tmpCluster, ...)
+
+  } else {
+    tmFcnPar <- function(...) lapply(...)
+  }
+
   # > ESTIMATION ########################################################## ----
 
   # |__ Fit and Predict ========================================================
@@ -291,7 +359,7 @@ gears <- function(DATA,
   ## level there is a table that returns the forecast by equation/model number
   ## (column) and rolling sample (row).
 
-  predictionGEARS <- lapply(
+  predictionGEARS <- tmFcnPar(
     X   = 1:forecast.horizon,
     function(X) {
       h <- X

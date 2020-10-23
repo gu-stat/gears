@@ -24,6 +24,8 @@ gears(
   use.intercept = c("both", "without", "with"),
   error.measure = c("mse", "mae", "mase", "smape", "owa"),
   betas.selection = c("last", "average", "both"),
+  use.parallel = FALSE,
+  num.cores = NULL,
   ...
 )
 }
@@ -97,6 +99,14 @@ from all rolling samples will be used.
 If \code{betas.selection == "both"}, then two out-of-sample forecasts
 will be estimated (one with \code{betas.selection == "last"} and
 another with \code{betas.selection == "average"}).}
+
+\item{use.parallel}{If parallel computing should be used. Default is
+\code{FALSE}.}
+
+\item{num.cores}{Number of cores to use if parallel computing is used.
+If \code{use.parallel == TRUE}, then the default is
+\code{detectCores() - 1}. For more details, see
+\link[parallel]{detectCores}.}
 
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
