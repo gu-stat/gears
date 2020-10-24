@@ -7,6 +7,8 @@
 #' @param forecast.horizon Number of periods for forecasting.
 #' @param size.rs Number of observations in the rolling sample.
 #' @param number.rs Number of rolling samples.
+#' @param glm.family A description of the error distribution to be used in the
+#'     model. See \link[stats]{glm} for details.
 #' @param level Confidence level for prediction intervals. Numeric value
 #'     between 0 and 100.
 #' @param y.name The name of the Y (left-hand side) variable. If NULL (default),
@@ -33,13 +35,16 @@
 #'     should have the same length as the ones in x.interaction.names.
 #'     Can be NULL (default) if your model does not have interaction terms.
 #' @param last.obs Index number of the last observation to be considered.
-#' @param use.intercept Checks for the vector
-#'     \code{c("both", "with", "without")}.
+#' @param use.intercept Possible values \code{c("both", "with", "without")}.
+#' @param error.measure Possible values
+#'     \code{c("mse", "mae", "mase", "smape", "owa")}.
+#' @param betas.selection Possible values \code{c("last", "average", "both")}.
 #'
 #' @return Stops the program and returns an error message.
 #' @keywords internal
 #'
-checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
+checks <- function(DATA, forecast.horizon, size.rs, number.rs, glm.family,
+                   level,
                    y.name = NULL,
                    y.max.lags = NULL,
                    x.names = NULL,
@@ -48,7 +53,49 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
                    x.fixed.lags = NULL,
                    x.interaction.names = NULL,
                    x.interaction.lags = NULL,
-                   last.obs, use.intercept){
+                   last.obs, use.intercept, error.measure, betas.selection){
+
+  # |__ GLM Family =============================================================
+
+  if(!missing(glm.family) & length(glm.family)>1) {
+    stop("Only one 'glm.family' allowed.")
+  }
+
+  # |__ Last Obs ===============================================================
+
+  if (!is.null(last.obs)) {
+
+    if (stats::is.ts(DATA)) {
+      checkLastObs <- length(DATA)
+    } else {
+      checkLastObs <- dim(DATA)[1]
+    }
+
+    if (last.obs > checkLastObs) {
+      stop(paste0(
+        "The value for 'last.obs' is greater than the size/length of your data."
+      ))
+    }
+
+  }
+
+  # |__ Intercept ==============================================================
+
+  if(!missing(use.intercept) & length(use.intercept)>1) {
+    stop("Only one 'use.intercept' allowed.")
+  }
+
+  # |__ Error Measure ==========================================================
+
+  if(!missing(error.measure) & length(error.measure)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
+
+  # |__ Betas Selection ========================================================
+
+  if(!missing(betas.selection) & length(betas.selection)>1) {
+    stop("Only one 'error.measure' allowed.")
+  }
 
   # |__ DATA ===================================================================
 
@@ -169,7 +216,7 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
     ## \______ X variables ----
 
     if (!is.null(x.names)) {
-      if (!(x.names %in% names(DATA))) {
+      if (sum(!(x.names %in% names(DATA))) >0) {
         stop(paste0(
           "Name of at least one X variable ('x.names') not found ",
           "among the columns of DATA. Please, check the spelling of ",
@@ -195,6 +242,16 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
 
     ## \____ X Variables - Fixed ----
 
+    if (!is.null(x.fixed.names)) {
+      if (sum(!(x.fixed.names %in% names(DATA))) >0) {
+        stop(paste0(
+          "Name of at least one X variable ('x.fixed.names') not found ",
+          "among the columns of DATA. Please, check the spelling of ",
+          "'x.fixed.names' variable."
+        ))
+      }
+    }
+
     if (!is.null(x.fixed.names) & is.null(x.fixed.lags)) {
       stop(paste0(
         "You have defined a value for 'x.fixed.names' but ",
@@ -212,6 +269,21 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
     }
 
     ## \____ X Variables - Interactions ----
+
+    if (!is.null(x.interaction.names)) {
+
+      tmp_Inter_names <- strsplit(x = unlist(x.interaction.names), split ="\\*")
+
+      tmp_unique_inter_names <- unique(unlist(tmp_Inter_names))
+
+      if (sum(!(tmp_unique_inter_names %in% names(DATA))) >0) {
+        stop(paste0(
+          "Name of at least one X variable ('x.interaction.names') not found ",
+          "among the columns of DATA. Please, check the spelling of ",
+          "'x.interaction.names' variable."
+        ))
+      }
+    }
 
     if (!is.null(x.interaction.names) & is.null(x.interaction.lags)) {
       stop(paste0(
@@ -237,28 +309,48 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
 
   ## Number of Y parameters (Y_{t-0},...,Y_{t-y.max.lags})
 
-  if (!is.null(y.max.lags) | y.max.lags > 0) {
+  # if (!is.null(y.max.lags) | y.max.lags > 0) {
+  #   parameters.y <- sum(y.max.lags, 1)
+  # } else {
+  #   parameters.y <- 0
+  # }
+  if (!is.null(y.max.lags)) {
     parameters.y <- sum(y.max.lags, 1)
   } else {
     parameters.y <- 0
   }
 
   ## Number of X parameters (X_{t-0},...,X_{t-x.max.lags})
-  if (!is.null(x.max.lags) | sum(unlist(x.max.lags)) > 0) {
+  # if (!is.null(x.max.lags) | sum(unlist(x.max.lags)) > 0) {
+  #   parameters.x <- sum(unlist(x.max.lags), 1)
+  # } else {
+  #   parameters.x <- 0
+  # }
+  if (!is.null(x.max.lags)) {
     parameters.x <- sum(unlist(x.max.lags), 1)
   } else {
     parameters.x <- 0
   }
 
   ## Number of FIXED X parameters (X_{t-x.fixed.lags})
-  if (!is.null(x.fixed.lags) | sum(unlist(x.fixed.lags)) > 0) {
+  # if (!is.null(x.fixed.lags) | sum(unlist(x.fixed.lags)) > 0) {
+  #   parameters.x.fixed <- sum(unlist(x.fixed.lags))
+  # } else {
+  #   parameters.x.fixed <- 0
+  # }
+  if (!is.null(x.fixed.lags)) {
     parameters.x.fixed <- sum(unlist(x.fixed.lags))
   } else {
     parameters.x.fixed <- 0
   }
 
   ## Number of INTERACTED X parameters (X_{t-x.interaction.lags))
-  if (!is.null(x.interaction.lags) | sum(unlist(x.interaction.lags)) > 0) {
+  # if (!is.null(x.interaction.lags) | sum(unlist(x.interaction.lags)) > 0) {
+  #   parameters.x.interaction <- sum(unlist(x.interaction.lags))
+  # } else {
+  #   parameters.x.interaction <- 0
+  # }
+  if (!is.null(x.interaction.lags)) {
     parameters.x.interaction <- sum(unlist(x.interaction.lags))
   } else {
     parameters.x.interaction <- 0
@@ -290,7 +382,23 @@ checks <- function(DATA, forecast.horizon, size.rs, number.rs, level,
 
   # |__ Max Number of Random Samples Given Min Size of Rolling Sample ==========
 
-  y.x.max.lags <- max(y.max.lags, unlist(x.max.lags))
+  if (!is.null(y.max.lags)) tmpYLags <- y.max.lags else tmpYLags <- 0
+
+  if (!is.null(x.max.lags)) {
+    tmpXVLags <- sum(unlist(x.max.lags))
+  } else tmpXVLags <- 0
+
+  if (!is.null(x.fixed.lags)) {
+    tmpXFLags <- sum(unlist(x.fixed.lags))
+  } else tmpXFLags <- 0
+
+  if (!is.null(x.interaction.lags)) {
+    tmpXILags <- sum(unlist(x.interaction.lags))
+  } else tmpXILags <- 0
+
+  y.x.max.lags <- max(tmpYLags, tmpXVLags)
+  y.x.max.lags <- max(y.x.max.lags, tmpXFLags)
+  y.x.max.lags <- max(y.x.max.lags, tmpXILags)
 
   max.number.rs.given.min.size.rs <-
     last.obs - (2*forecast.horizon) - min.size.rs - y.x.max.lags + 1

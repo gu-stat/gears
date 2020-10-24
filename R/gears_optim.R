@@ -73,13 +73,14 @@
 #'     }}{\eqn{Y_t, Y_{t-1},Y_{t-2}}} will be included in the list of variables
 #'     to enter the right-hand side of the equation.
 #'
-#' @return A data frame with four columns: "size.rs", "number.rs", "intercept",
-#'    and the last one named after the selected error measure. The last column
-#'    returns the minimum value for the selected error measure, and the columns
-#'    "size.rs" and "number.rs" return the sample sizes and the number of
-#'    rolling samples used to get this minimum. The column "intercept" gives
+#' @return A data frame with five columns: "size.rs", "number.rs", "intercept",
+#'    "betas" and the last one named after the selected error measure. The last
+#'    column returns the minimum value for the selected error measure, and the
+#'    columns "size.rs" and "number.rs" return the sample sizes and the number
+#'    of rolling samples used to get this minimum. The column "intercept" gives
 #'    information on whether the intercept was used ("with"), or not
-#'    ("without").
+#'    ("without") on the best model. The "betas" column tells which
+#'    \code{betas.selection} returns the best results.
 #'
 #' @author Gustavo Varela-Alvarenga
 #'
@@ -87,6 +88,7 @@
 #'
 #' @examples
 #' # Univariate Time Series Forecasting - Data of class 'ts'.
+#' # Using betas.selection = "last"
 #' gears_optim(
 #'   DATA                = datasets::WWWusage,
 #'   forecast.horizon    = 12,
@@ -111,6 +113,8 @@
 #'    num.cores          = NULL
 #' )
 #'
+#' # Univariate Time Series Forecasting - Data of class 'ts'.
+#' # Using betas.selection = "both"
 #' gears_optim(
 #'   DATA                = datasets::WWWusage,
 #'   forecast.horizon    = 12,
@@ -161,28 +165,21 @@
 #'
 #' # With Parallel Computing
 #' # Univariate Time Series Forecasting - Data of class 'ts'.
+#' ## If num.cores = NULL, the function uses
+#' ## num.cores = parallel::detectCores() - 1
 #' gears_optim(
 #'   DATA                = datasets::WWWusage,
 #'   forecast.horizon    = 12,
 #'   search.size.rs      = c(20, 30),
 #'   search.number.rs    = c(10, 12),
 #'   level               = 95,
-#'   details             = FALSE,
 #'   glm.family          = "quasi",
-#'   y.name              = NULL,
 #'   y.max.lags          = 2,
-#'   x.names             = NULL,
-#'   x.max.lags          = NULL,
-#'   x.fixed.names       = NULL,
-#'   x.fixed.lags        = NULL,
-#'   x.interaction.names = NULL,
-#'   x.interaction.lags  = NULL,
-#'   last.obs            = length(datasets::WWWusage),
 #'   use.intercept       = "both",
 #'   error.measure       = "mse",
 #'   betas.selection     = "last",
 #'   use.parallel        = TRUE,
-#'   num.cores          = NULL
+#'   num.cores           = NULL
 #' )
 #'
 #' @export
@@ -217,34 +214,13 @@ gears_optim <- function(DATA,
   # TODO: Check problems with checks under Univariate TS Inputs
   # > CHECK ARGUMENTS ##################################################### ----
 
-  # |__ Checks that STOP the function ==========================================
-
-  checks(
-    DATA,
-    forecast.horizon,
-    size.rs = max(search.size.rs),
-    number.rs = max(search.number.rs),
-    level,
-    y.name,
-    y.max.lags,
-    x.names,
-    x.max.lags,
-    x.fixed.names,
-    x.fixed.lags,
-    x.interaction.names,
-    x.interaction.lags,
-    last.obs, use.intercept
-  )
-
   # |__ GLM Family =============================================================
 
-  if (missing(glm.family)) glm.family <- "quasi"
-
-  if(!missing(glm.family) & length(glm.family)>1) {
-    stop("Only one 'glm.family' allowed.")
+  if (missing(glm.family)){
+    glm.family <- "quasi"
+  } else {
+    glm.family <- match.arg(glm.family)
   }
-
-  glm.family <- match.arg(glm.family)
 
   # |__ Last Observation =======================================================
 
@@ -254,48 +230,54 @@ gears_optim <- function(DATA,
     } else {
       last.obs <- dim(DATA)[1]
     }
-  } else {
-    if (stats::is.ts(DATA)) {
-      checkLastObs <- length(DATA)
-    } else {
-      checkLastObs <- dim(DATA)[1]
-    }
-    if (last.obs > checkLastObs) {
-      stop(paste0(
-        "The value for 'last.obs' is greater than the size/length of your data."
-      ))
-    }
   }
 
   # |__ Intercept ==============================================================
 
-  if (missing(use.intercept)) use.intercept <- "both"
-
-  if(!missing(use.intercept) & length(use.intercept)>1) {
-    stop("Only one 'use.intercept' allowed.")
+  if (missing(use.intercept)){
+    use.intercept <- "both"
+  } else {
+    use.intercept <- match.arg(use.intercept)
   }
-
-  use.intercept <- match.arg(use.intercept)
 
   # |__ Error Measure ==========================================================
 
-  if (missing(error.measure)) error.measure <- "mse"
-
-  if(!missing(error.measure) & length(error.measure)>1) {
-    stop("Only one 'error.measure' allowed.")
+  if (missing(error.measure)){
+    error.measure <- "mse"
+  } else {
+    error.measure <- match.arg(error.measure)
   }
-
-  error.measure <- match.arg(error.measure)
 
   # |__ Betas Selection ========================================================
 
-  if (missing(betas.selection)) betas.selection <- "both"
-
-  if(!missing(betas.selection) & length(betas.selection)>1) {
-    stop("Only one 'error.measure' allowed.")
+  if (missing(betas.selection)){
+    betas.selection <- "both"
+  } else {
+    betas.selection <- match.arg(betas.selection)
   }
 
-  betas.selection <- match.arg(betas.selection)
+  # |__ Checks that STOP the function ==========================================
+
+  checks(
+    DATA,
+    forecast.horizon,
+    size.rs = max(search.size.rs),
+    number.rs = max(search.number.rs),
+    glm.family,
+    level,
+    y.name,
+    y.max.lags,
+    x.names,
+    x.max.lags,
+    x.fixed.names,
+    x.fixed.lags,
+    x.interaction.names,
+    x.interaction.lags,
+    last.obs,
+    use.intercept,
+    error.measure,
+    betas.selection
+  )
 
   # # |__ Univariate TS Inputs ===================================================
   #

@@ -111,23 +111,62 @@ If \code{use.parallel == TRUE}, then the default is
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
 \value{
-An object of class "\code{gears}".
+An object of class "\code{gears}". The function \code{summary} is
+    used to obtain and print a summary of the results,
+    while the function \code{plot} produces a plot of the forecasts and
+    prediction intervals.
     An object of class "\code{gears}" is a list containing the following
     elements:
     \describe{
-     \item{fitted_best}{A list containing information about
-         the best fitted model for each error measure (outer level of the
-         list), forecast horizon (inner level 1), and each rolling sample
-         (inner level 2).}
-     \item{out_sample_point_forecasts}{A data frame containing point
-         forecasts for each error measure and beta-selection method.}
-     \item{insample_point_estimates}{List containing the out-of-sample point
-         estimates for each rolling sample (row) and each forecast horizon
-         (column).}
-     \item{insample_mean_error_measure}{A data frame containing the mean
-         prediction errors for each error measure and forecast horizon.}
-     \item{best_equations}{A data frame containing information about the best
-         equation fitted for each error measure and forecast horizon.}
+     \item{out_sample_point_forecasts}{If \code{betas.selection != "both"},
+         the output is a \code{ts} object containing the out-of-sample
+         point forecasts obtained from the best model.
+         Otherwise, it is a list with two \code{ts} objects,
+         each containing the out-of-sample point forecasts for the two cases.
+         The first one is for when \code{betas.selection == "last"}, and the
+         second one is for when \code{betas.selection == "average"}.}
+     \item{lower}{If \code{betas.selection != "both"},
+         the output is a \code{ts} object containing the lower limits for
+         prediction intervals. Otherwise, it is a list with two
+         \code{ts} objects, each containing the the lower limits for the two
+         cases. The first one is for when \code{betas.selection == "last"},
+         and the second one is for when \code{betas.selection == "average"}.}
+     \item{upper}{If \code{betas.selection != "both"},
+         the output is a \code{ts} object containing the upper limits for
+         prediction intervals. Otherwise, it is a list with two
+         \code{ts} objects, each containing the the upper limits for the two
+         cases. The first one is for when \code{betas.selection == "last"},
+         and the second one is for when \code{betas.selection == "average"}.}
+     \item{x}{A \code{ts} object with the original time series.
+         If \code{DATA} is a data.frame, it returns the dependent variable as
+         a \code{ts} object.}
+     \item{x.fitted}{A \code{ts} object of \code{length = number.rs} with
+         the in-sample predictions.}
+     \item{total_models}{The total number of models evaluated by
+         the function.}
+     \item{total_equations_estimated}{The total number of equations estimated
+         by the function. It is the value of \code{total_models} times the
+         number of rolling samples (\code{number.rs}) and the forecast
+         horizon (\code{forecast.horizon}).}
+     \item{betas}{The \code{beta.selection} used.}
+     \item{error_measure}{The \code{error.measure} used.}
+     \item{min_prediction_errors}{A matrix object with two columns - one for
+         the forecast lead number, and the other for the values of the
+         minimum prediction error for the given measure -, and number of rows
+         equal to \code{number.rs}.}
+     \item{mse_out_sample_prediction}{A matrix object with two columns - one
+         for the forecast lead number, and the other for the values of the
+         MSE for the best model -, and number of rows
+         equal to \code{number.rs}.}
+     \item{details}{A list containing information about
+         the best fitted model for each forecast lead. If
+         \code{details == FALSE}, the list contains information on the best
+         equation estimated for that particular forecast lead, and its
+         associated in-sample predictions (for all rolling samples) and their
+         associated prediction errors. If \code{details == TRUE}, it also
+         includes all the information from the \link[stats]{glm} fit for each
+         forecast lead.}
+    \item{model}{A list with the model call used in this function.}
     }
 }
 \description{
@@ -167,6 +206,21 @@ gears(
   betas.selection     = "last"
 )
 
+# Using Parallel Computing - Univariate Time Series Forecasting - Data of
+# class 'ts'.
+gears:::gears(
+  DATA                = datasets::WWWusage,
+  forecast.horizon    = 10,
+  size.rs             = 20,
+  number.rs           = 12,
+  glm.family          = "quasi",
+  y.max.lags          = 2,
+  error.measure       = "mse",
+  betas.selection     = "last",
+  use.parallel        = TRUE,
+  num.cores           = 2
+)
+
 # Univariate Time Series Forecasting - Data from a data frame.
 gears(
   DATA                = gears::commodities_prices,
@@ -201,7 +255,7 @@ gears(
   glm.family          = "quasi",
   y.name              = "PORK_PRICE" ,
   y.max.lags          = 1,
-  x.names             = list("BEEF_PRICE", "WHEAT_PRICE") ,
+  x.names             = list("BEEF_PRICE", "WHEAT_PRICE"),
   x.max.lags          = list(2, 1),
   x.fixed.names       = NULL,
   x.fixed.lags        = NULL,
@@ -235,6 +289,7 @@ gears(
   error.measure       = "mse",
   betas.selection     = "last"
 )
+
 }
 \author{
 Gustavo Varela-Alvarenga

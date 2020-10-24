@@ -9,6 +9,7 @@ checks(
   forecast.horizon,
   size.rs,
   number.rs,
+  glm.family,
   level,
   y.name = NULL,
   y.max.lags = NULL,
@@ -19,7 +20,9 @@ checks(
   x.interaction.names = NULL,
   x.interaction.lags = NULL,
   last.obs,
-  use.intercept
+  use.intercept,
+  error.measure,
+  betas.selection
 )
 }
 \arguments{
@@ -30,6 +33,9 @@ checks(
 \item{size.rs}{Number of observations in the rolling sample.}
 
 \item{number.rs}{Number of rolling samples.}
+
+\item{glm.family}{A description of the error distribution to be used in the
+model. See \link[stats]{glm} for details.}
 
 \item{level}{Confidence level for prediction intervals. Numeric value
 between 0 and 100.}
@@ -67,8 +73,12 @@ Can be NULL (default) if your model does not have interaction terms.}
 
 \item{last.obs}{Index number of the last observation to be considered.}
 
-\item{use.intercept}{Checks for the vector
-\code{c("both", "with", "without")}.}
+\item{use.intercept}{Possible values \code{c("both", "with", "without")}.}
+
+\item{error.measure}{Possible values
+\code{c("mse", "mae", "mase", "smape", "owa")}.}
+
+\item{betas.selection}{Possible values \code{c("last", "average", "both")}.}
 }
 \value{
 Stops the program and returns an error message.

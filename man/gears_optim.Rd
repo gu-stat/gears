@@ -113,13 +113,14 @@ If \code{use.parallel == TRUE}, then the default is
 \item{...}{Further arguments passed to \link[stats]{glm}.}
 }
 \value{
-A data frame with four columns: "size.rs", "number.rs", "intercept",
-   and the last one named after the selected error measure. The last column
-   returns the minimum value for the selected error measure, and the columns
-   "size.rs" and "number.rs" return the sample sizes and the number of
-   rolling samples used to get this minimum. The column "intercept" gives
+A data frame with five columns: "size.rs", "number.rs", "intercept",
+   "betas" and the last one named after the selected error measure. The last
+   column returns the minimum value for the selected error measure, and the
+   columns "size.rs" and "number.rs" return the sample sizes and the number
+   of rolling samples used to get this minimum. The column "intercept" gives
    information on whether the intercept was used ("with"), or not
-   ("without").
+   ("without") on the best model. The "betas" column tells which
+   \code{betas.selection} returns the best results.
 }
 \description{
 This algorithm will search for the "best" size of the rolling sample and the
@@ -137,6 +138,7 @@ If \code{y.max.lags} equals to a number, then all lags of
 }
 \examples{
 # Univariate Time Series Forecasting - Data of class 'ts'.
+# Using betas.selection = "last"
 gears_optim(
   DATA                = datasets::WWWusage,
   forecast.horizon    = 12,
@@ -161,6 +163,8 @@ gears_optim(
    num.cores          = NULL
 )
 
+# Univariate Time Series Forecasting - Data of class 'ts'.
+# Using betas.selection = "both"
 gears_optim(
   DATA                = datasets::WWWusage,
   forecast.horizon    = 12,
@@ -211,28 +215,21 @@ gears_optim(
 
 # With Parallel Computing
 # Univariate Time Series Forecasting - Data of class 'ts'.
+## If num.cores = NULL, the function uses
+## num.cores = parallel::detectCores() - 1
 gears_optim(
   DATA                = datasets::WWWusage,
   forecast.horizon    = 12,
   search.size.rs      = c(20, 30),
   search.number.rs    = c(10, 12),
   level               = 95,
-  details             = FALSE,
   glm.family          = "quasi",
-  y.name              = NULL,
   y.max.lags          = 2,
-  x.names             = NULL,
-  x.max.lags          = NULL,
-  x.fixed.names       = NULL,
-  x.fixed.lags        = NULL,
-  x.interaction.names = NULL,
-  x.interaction.lags  = NULL,
-  last.obs            = length(datasets::WWWusage),
   use.intercept       = "both",
   error.measure       = "mse",
   betas.selection     = "last",
   use.parallel        = TRUE,
-  num.cores          = NULL
+  num.cores           = NULL
 )
 
 }
