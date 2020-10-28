@@ -364,6 +364,8 @@ gears_optim <- function(DATA,
       tmpTestStart   <- tmpTrainEnd + (1 / tmpFreq)
       tmpTestEnd     <- tmpEnd # or use tmpEnd - (tmpFreq / tmpFreq)
 
+      tmpLastObs     <- which(stats::time(DATA) == tmpTrainEnd)
+
     } else {
 
       tmpTrainEnd    <- tmpEnd - (forecast.horizon / tmpFreq)
@@ -371,6 +373,7 @@ gears_optim <- function(DATA,
       tmpTestStart   <- tmpTrainEnd + (1 / tmpFreq)
       tmpTestEnd     <- tmpEnd # or use tmpEnd - (tmpFreq / tmpFreq)
 
+      tmpLastObs     <- which(stats::time(DATA) == tmpTrainEnd)
     }
 
     trainingData <- stats::window(
@@ -396,6 +399,8 @@ gears_optim <- function(DATA,
 
     trainingData <- DATA[1:tmpTrainEnd, ]
     testData     <- DATA[tmpTestStart:tmpTestEnd, ]
+
+    tmpLastObs   <- dim(trainingData)[1]
 
   }
 
@@ -449,7 +454,8 @@ gears_optim <- function(DATA,
           "trainingData",
           "testData",
           "tmpTrainEnd",
-          "tmpFreq"
+          "tmpFreq",
+          "tmpLastObs"
         )
       )
       parallel::clusterEvalQ(tmpCluster, library("gears"))
@@ -481,7 +487,7 @@ gears_optim <- function(DATA,
               DATA      = trainingData,
               size.rs   = tmpSize,
               number.rs = tmpNumber,
-              last.obs  = tmpTrainEnd,
+              last.obs  = tmpLastObs,
               forecast.horizon,
               glm.family,
               level,
@@ -557,7 +563,7 @@ gears_optim <- function(DATA,
           DATA      = trainingData,
           size.rs   = allCombinations[X, "size.rs"],
           number.rs = allCombinations[X, "number.rs"],
-          last.obs  = tmpTrainEnd,
+          last.obs  = tmpLastObs,
           forecast.horizon,
           glm.family,
           level,
