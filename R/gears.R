@@ -526,7 +526,7 @@ gears <- function(DATA,
         envir = .GlobalEnv
       )
     } else {
-      tmpCluster <- parallel::makeForkCluster(no_cores)
+      tmpCluster <- parallel::makeForkCluster(nnodes = no_cores)
       on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
     }
 
