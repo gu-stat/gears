@@ -498,10 +498,10 @@ gears <- function(DATA,
 
     # Initiate cluster
 
-    if (Sys.info()[['sysname']] != "Windows") {
+    if (Sys.info()[['sysname']] == "Darwin") {
       tmpCluster <- parallel::makeCluster(no_cores, type = "FORK")
       on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
-    } else {
+    } else if (Sys.info()[['sysname']] == "Windows"){
 
       tmpCluster <- parallel::makeCluster(no_cores)
       on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
@@ -525,6 +525,9 @@ gears <- function(DATA,
         fit_predict,
         envir = .GlobalEnv
       )
+    } else {
+      tmpCluster <- parallel::makeForkCluster(no_cores)
+      on.exit(parallel::stopCluster(tmpCluster), add = TRUE)
     }
 
     # Temporary lapply function
