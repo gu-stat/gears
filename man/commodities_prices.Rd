@@ -6,7 +6,7 @@
 \title{Primary Commodities Price Data}
 \format{
 A dataframe with 483 observations, and 6 variables.
-   The variables are described in the
+   The variables are described in the \cr
    \code{\link{commodities_prices_data_dictionary}}.
 }
 \source{

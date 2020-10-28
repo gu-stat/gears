@@ -6,7 +6,7 @@
 #' Data is collected monthly, starting on January, 1980.
 #'
 #' @format A dataframe with 483 observations, and 6 variables.
-#'    The variables are described in the
+#'    The variables are described in the \cr
 #'    \code{\link{commodities_prices_data_dictionary}}.
 #' @source \url{https://www.imf.org/~/media/Files/Research/CommodityPrices/Monthly/Table3.ashx}
 "commodities_prices"
