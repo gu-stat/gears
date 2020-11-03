@@ -87,7 +87,7 @@ forecast_naive2 <- function(ts.data, ts.frequency, forecast.horizon,
 
   tmp.forecast.horizon <- forecast.horizon - 1
 
-  tmp.end.original  <- stats::tsp(deseason.ts.data)[2]
+  tmp.end.original   <- stats::tsp(deseason.ts.data)[2]
   tmp.start.forecast <- tmp.end.original + (1/ts.frequency)
 
   tmp.end.forecast  <-

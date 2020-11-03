@@ -18,44 +18,45 @@
 #' @keywords internal
 # @examples
 # seasonality_test(
-#   ts.data = datasets::WWWusage,
+#   ts.data      = datasets::WWWusage,
 #   ts.frequency = frequency(datasets::WWWusage),
-#   alpha.level = 0.05
+#   alpha.level  = 0.05
 # )
 #
 # seasonality_test(
-#  ts.data = datasets::AirPassengers,
+#  ts.data       = datasets::AirPassengers,
 #   ts.frequency = frequency(datasets::AirPassengers),
-#   alpha.level = 0.05
+#   alpha.level  = 0.05
 # )
 #
 # seasonality_test(
-#   ts.data = datasets::EuStockMarkets[, "DAX"],
+#   ts.data      = datasets::EuStockMarkets[, "DAX"],
 #   ts.frequency = frequency(datasets::EuStockMarkets[, "DAX"]),
-#   alpha.level = 0.05
+#   alpha.level  = 0.05
 # )
+#'
 seasonality_test <- function(ts.data, ts.frequency, alpha.level = 0.05){
 
-  tmp.tcrit <- stats::qnorm(1 - alpha.level)
+  tmpTCrit <- stats::qnorm(1 - alpha.level)
 
   if (length(ts.data) < 3 * ts.frequency){
 
-    test_seasonal <- FALSE
+    testSeasonal <- FALSE
 
   } else {
 
-    xacf <- stats::acf(ts.data, plot = FALSE)$acf[-1, 1, 1]
+    tmpACF <- stats::acf(ts.data, plot = FALSE)$acf[-1, 1, 1]
 
-    clim <- tmp.tcrit/sqrt(length(ts.data)) * sqrt(cumsum(c(1, 2 * xacf^2)))
+    tmpCLim <- tmpTCrit/sqrt(length(ts.data)) * sqrt(cumsum(c(1, 2 * tmpACF^2)))
 
-    test_seasonal <- (abs(xacf[ts.frequency]) > clim[ts.frequency])
+    testSeasonal <- (abs(tmpACF[ts.frequency]) > tmpCLim[ts.frequency])
 
-    if (is.na(test_seasonal) ==  TRUE){
-      test_seasonal <- FALSE
+    if (is.na(testSeasonal) ==  TRUE){
+      testSeasonal <- FALSE
     }
 
   }
 
   # |__ RETURN =================================================================
-  return(test_seasonal)
+  return(testSeasonal)
 }
